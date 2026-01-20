@@ -1,0 +1,12 @@
+# Include production requirements
+-r requirements.txt
+
+# Development and code quality
+pytest
+pre-commit
+ruff
+commitizen
+commitizen-gitmoji
+questionary==1.10.0
+prompt-toolkit==3.0.36
+detect-secrets

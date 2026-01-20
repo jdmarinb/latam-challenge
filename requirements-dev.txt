@@ -5,8 +5,12 @@
 pytest
 pre-commit
 ruff
-commitizen
-commitizen-gitmoji
+commitizen==2.42.1
+commitizen-gitmoji==0.1.1
 questionary==1.10.0
 prompt-toolkit==3.0.36
-detect-secrets
+detect-secrets==1.5.0
+ipykernel
+pandas
+matplotlib
+emoji

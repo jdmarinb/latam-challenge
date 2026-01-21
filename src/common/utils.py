@@ -14,7 +14,7 @@ twitter_schema = {
 
 
 def read_polars(file_path):
-    return lambda file_path: pl.scan_ndjson(file_path, schema=twitter_schema)
+    return pl.scan_ndjson(file_path, schema=twitter_schema)
 
 
 def read_orjson(file_path: str) -> Iterable[dict]:

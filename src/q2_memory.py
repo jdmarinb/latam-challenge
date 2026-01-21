@@ -1,27 +1,26 @@
 import re
 from functools import reduce
 from collections import Counter
-from src.common.utils import read_streaming_orjson as extractor
+from src.common.utils import read_orjson as extractor
 
 
 # Modular Functional Blocks (KISS)
-def get_top_k(counters, k):
-    return sorted(counters.items(), key=lambda x: (-x[1], x[0]))[:k]
+get_top_k = lambda counters, k: sorted(counters.items(), key=lambda x: (-x[1], x[0]))[
+    :k
+]
 
 
-def emoji_extractor(file_path, pattern):
-    return map(
-        lambda t: pattern.findall(t.get("content", "")),
-        extractor(file_path),
-    )
+emoji_extractor = lambda file_path, pattern: map(
+    lambda t: pattern.findall(t.get("content", "")),
+    extractor(file_path),
+)
 
 
-def emoji_counter(emoji_stream):
-    return reduce(
-        lambda acc, emojis: (acc.update(emojis), acc)[1],
-        emoji_stream,
-        Counter(),
-    )
+emoji_counter = lambda emoji_stream: reduce(
+    lambda acc, emojis: (acc.update(emojis), acc)[1],
+    emoji_stream,
+    Counter(),
+)
 
 
 def q2_memory(file_path: str) -> list[tuple[str, int]]:

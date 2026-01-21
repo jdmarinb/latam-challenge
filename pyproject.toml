@@ -8,3 +8,6 @@ update_changelog_on_bump = true
 line-length = 88
 target-version = "py312"
 exclude = ["*.ipynb"]
+
+[tool.ruff.lint]
+ignore = ["E731"]

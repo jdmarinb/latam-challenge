@@ -3,20 +3,15 @@ from src.common.utils import read_polars as extractor
 
 
 # Modular Functional Blocks returning LazyFrames (Optimized for Time)
-def emoji_extractor(lf, regex):
-    return (
-        lf.select(pl.col("content").str.extract_all(regex).alias("emoji"))
-        .explode("emoji")
-        .filter(pl.col("emoji").is_not_null())
-    )
+emoji_extractor = lambda lf, regex: (
+    lf.select(pl.col("content").str.extract_all(regex).alias("emoji"))
+    .explode("emoji")
+    .filter(pl.col("emoji").is_not_null())
+)
 
+emoji_counter = lambda lf: lf.group_by("emoji").len()
 
-def emoji_counter(lf):
-    return lf.group_by("emoji").len()
-
-
-def get_top_k(lf, k):
-    return lf.top_k(k, by="len")
+get_top_k = lambda lf, k: lf.top_k(k, by="len")
 
 
 def q2_time(file_path: str) -> list[tuple[str, int]]:

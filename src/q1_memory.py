@@ -1,54 +1,48 @@
 from datetime import datetime
 from collections import Counter
 from functools import reduce
-from src.common.utils import read_streaming_orjson as extractor
+from src.common.utils import read_orjson as extractor
 
 
 # Modular Functional Blocks (KISS)
-def get_top_k(counters, k):
-    return [d for d, _ in counters.most_common(k)]
+get_top_k = lambda counters, k: [d for d, _ in counters.most_common(k)]
 
 
-def date_counter(file_path):
-    return reduce(
-        lambda acc, date: (acc.update([date]), acc)[1],
-        map(lambda t: t.get("date", "")[:10], extractor(file_path)),
-        Counter(),
-    )
+date_counter = lambda file_path: reduce(
+    lambda acc, date: (acc.update([date]), acc)[1],
+    map(lambda t: t.get("date", "")[:10], extractor(file_path)),
+    Counter(),
+)
 
 
-def user_date_counter(file_path, target_dates):
-    return reduce(
-        lambda acc, pair: (acc.update([pair]), acc)[1],
-        filter(
-            lambda p: p[0] in target_dates,
-            map(
-                lambda t: (t.get("date", "")[:10], t.get("user", {}).get("username")),
-                extractor(file_path),
-            ),
+user_date_counter = lambda file_path, target_dates: reduce(
+    lambda acc, pair: (acc.update([pair]), acc)[1],
+    filter(
+        lambda p: p[0] in target_dates,
+        map(
+            lambda t: (t.get("date", "")[:10], t.get("user", {}).get("username")),
+            extractor(file_path),
         ),
-        Counter(),
-    )
+    ),
+    Counter(),
+)
 
 
-def user_ranker(user_date_counts):
-    return reduce(
-        lambda acc, item: (
-            lambda d, u, c: (
-                (
-                    acc.update({d: (u, c)})
-                    if c > acc.get(d, (None, -1))[1]
-                    or (
-                        c == acc.get(d, (None, -1))[1] and u < acc.get(d, (None, -1))[0]
-                    )
-                    else None
-                ),
-                acc,
-            )[1]
-        )(item[0][0], item[0][1], item[1]),
-        user_date_counts.items(),
-        {},
-    )
+user_ranker = lambda user_date_counts: reduce(
+    lambda acc, item: (
+        lambda d, u, c: (
+            (
+                acc.update({d: (u, c)})
+                if c > acc.get(d, (None, -1))[1]
+                or (c == acc.get(d, (None, -1))[1] and u < acc.get(d, (None, -1))[0])
+                else None
+            ),
+            acc,
+        )[1]
+    )(item[0][0], item[0][1], item[1]),
+    user_date_counts.items(),
+    {},
+)
 
 
 def q1_memory(file_path: str) -> list[tuple[datetime.date, str]]:

@@ -3,22 +3,19 @@ from src.common.utils import read_polars as extractor
 
 
 # Modular Functional Blocks returning LazyFrames (Optimized for Time)
-def mention_extractor(lf):
-    return lf.select(
+mention_extractor = lambda lf: (
+    lf.select(
         pl.col("mentionedUsers")
         .explode()
         .struct.field("username")
         .str.to_lowercase()
         .alias("username")
     ).filter(pl.col("username").is_not_null() & (pl.col("username") != ""))
+)
 
+mention_counter = lambda lf: lf.group_by("username").len()
 
-def mention_counter(lf):
-    return lf.group_by("username").len()
-
-
-def get_top_k(lf, k):
-    return lf.top_k(k, by="len")
+get_top_k = lambda lf, k: lf.top_k(k, by="len")
 
 
 def q3_time(file_path: str) -> list[tuple[str, int]]:

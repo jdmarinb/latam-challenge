@@ -104,7 +104,7 @@ La documentación de Twitter indica que un usuario puede cambiar su `username` (
 
 El reto pide menciones basadas en el conteo de `@`. Sin embargo, el campo `mentionedUsers` es un objeto enriquecido por Twitter que ya parseó el texto.
 
-**Caso Borde**: ¿Qué pasa si el texto dice `@usuario` pero el objeto `mentionedUsers` es `null` (común en tweets borrados o cuentas suspendidas)?
+**Caso Borde**: ¿Qué pasa si el texto dice `@usuario` pero el objeto `mentionedUsers` es `null` (común en tweets borrados o para cuentas suspendidas)?
 
 **Decisión**: Se usa el campo estructurado `mentionedUsers` (más eficiente y captura menciones "invisibles" como hidden/reply) en lugar de regex sobre el texto. Si es `null`, el tweet no cuenta menciones aunque el texto tenga `@`.
 
@@ -189,7 +189,7 @@ Tras un análisis estadístico de 10,000 registros, se identificaron los siguien
 - **Recomendación**: procesamiento por streaming (línea por línea) para optimizar memoria
 - La estructura anidada (`user`, `mentionedUsers`) requiere navegación cuidadosa del JSON para evitar errores por campos nulos
 
-## 3. Estrategias de Optimización y Arquitectura
+## 3. Estrategias de Optimización
 
 Una de las estrategias centrales es aprovechar capacidades nativas y librerías optimizadas para maximizar la eficiencia en ambos frentes:
 
@@ -223,6 +223,7 @@ Una de las estrategias centrales es aprovechar capacidades nativas y librerías 
 
 ## 4. Benchmarks
 
+
 Para medir el rendimiento del algoritmo en tiempo y memoria se utilizan las librerias `memory_profiler` y `cProfile` y `pstats` para medir los tiempos como se sugeria en el  [README.md](README.md). Haciendo uso de esta misma función optimizó cada parte del codigo.
 
 ### 4.1 Lectura de Archivo
@@ -251,11 +252,69 @@ Tras aplicar `cProfile` y `pstats` en un laboratorio modular, se identificaron l
 
 ### 4.2. Procesamiento
 
-Para el procesamiento se evaluan las opciones de lectura elegdas **`polars`** con schema en sus versiones **Lazy** y **Eager** y el procesamiento en formato vectorial, y por otro lado **`orJson`** con procesamiento en el paradigma **funcional**. Ambos metodos en *streamig* y en *batch*.
+Para el procesamiento se evaluan las opciones de lectura elegdas **`polars`** con schema en sus versiones **Lazy** y **Eager** y el procesamiento en formato vectorial, y por otro lado **`orJson`** con procesamiento en el paradigma **funcional**. Ambos metodos en *streamig* y en *batch*. **String Interning** y **Normalización On-the-fly**. Además de las optimizaciones especificas para cada caso definidas ene el punto **3.3.**.
 
+Debido a la latencia extra generada por archivos.ipynb se realiza la comparación d eestos métodos en el archivo [benchmark.py](benchmark.py). Para realizar esta prueba se definen algunas funciones decorador para evaluar las diferentes combinaciones de lectores y procesamiento, de modo qeu efectivamente se peuda elegir la mejor opción en cada
 
+#### 4.2.1. Pregunta 1: Top 10 Fechas y Usuarios más activos
 
+En esta pregunta, el cuello de botella es la agregación doble (por fecha y luego por usuario).
 
+| Método | Tiempo (s) | RAM (MB) | Veredicto |
+| :--- | :---: | :---: | :--- |
+| **Polars Lazy** | **0.20** | 624.50 | **1° Tiempo**. Agregación vectorial eficiente. |
+| **Polars Streaming** | 0.21 | 565.72 | Excelente balance. |
+| **ORJSON Streaming** | 2.59 | **113.57** | **1° Memoria**. Ideal para recursos limitados. |
+| ORJSON + Threading | 2.82 | 164.48 | Similar a streaming, ligero overhead. |
+| ORJSON + Processing | 5.54 | 542.75 | Ineficiente para esta carga simple. |
+
+**Conclusión**: **Polars** domina en latencia por su capacidad de realizar agregaciones en paralelo sobre memoria contigua. **ORJSON Streaming** es la mejor opción si la restricción es el *footprint* de RAM.
+
+#### 4.2.2. Pregunta 2: Top 10 Emojis más usados
+
+Esta es la tarea más intensiva en CPU. Se evaluaron tres enfoques: Precisión total con librería, Regex simple para velocidad y Regex (ZWJ Support) para un balance óptimo.
+
+| Enfoque | Método | Tiempo (s) | RAM (MB) | Veredicto |
+| :--- | :--- | :---: | :---: | :--- |
+| **Precisión** | **ORJSON + Multyprocessing (`emoji`)** | **7.90** | 797.96 | **1° Tiempo Preciso**. Evade el GIL. |
+| | Polars Lazy (`emoji`) | 22.62 | 597.86 | Lento (Serializado por map_elements). |
+| | Polars Streaming (`emoji`) | 22.70 | 659.02 | Lento. |
+| | Polars Eager (`emoji`) | 22.60 | 714.15 | Lento. |
+| | **ORJSON Streaming (`emoji`)** | 25.38 | **367.57** | **1° Memoria Precisa**. |
+| | ORJSON + Threading (`emoji`) | 24.91 | 416.00 | GIL bloquea beneficio de hilos. |
+| **Eficiencia** | **Polars Streaming (Regex)** | **0.34** | 594.46 | **Ganador Absoluto en Tiempo**. |
+| | Polars Lazy (Regex) | 0.42 | 494.61 | Muy eficiente. |
+| | Polars Eager (Regex) | 0.47 | 723.76 | Mayor consumo RAM. |
+| | **ORJSON Streaming (Regex)** | 3.65 | **110.92** | **Ganador Absoluto en Memoria**. |
+| | ORJSON + Threading (Regex) | 3.79 | 161.54 | Ligero overhead. |
+| | ORJSON + Processing (Regex) | 6.69 | 550.05 | IPC costoso para Regex rápida. |
+| **Balanceado** | **Polars Streaming (ZWJ Support)** | **0.35** | 633.68 | **RECOMENDADO**. ZWJ + Velocidad Rust. |
+| | Polars Lazy (ZWJ Support) | 0.46 | 597.33 | Muy eficiente. |
+| | **ORJSON Streaming (ZWJ Support)** | 4.06 | **110.84** | **1° Memoria (ZWJ Support)**. |
+| | ORJSON + Threading (ZWJ Support) | 4.27 | 163.49 | Similar a streaming. |
+| | ORJSON + Processing (ZWJ Support) | 7.21 | 540.87 | Paralelismo de CPU efectivo. |
+
+**Conclusión**:
+1. **Precisión vs Velocidad**: El uso de la librería `emoji` garantiza el conteo exacto de grafemas complejos pero es ~70 veces más lento que una **Regex (ZWJ Support)** vectorizada en Polars (~25s vs ~0.35s).
+2. **Impacto del GIL**: El análisis de emojis es una tarea CPU-bound. En el nivel de máxima precisión, el **Multiprocessing** reduce el tiempo en un 70% al evadir el GIL de Python.
+3. **Optimización Vectorial**: La **Regex (ZWJ Support)** en Polars representa el punto de equilibrio ideal: mantiene la capacidad de reconocer secuencias ZWJ con el rendimiento nativo de Rust. **ORJSON Streaming (Robust Regex)** es la opción ganadora si se requiere soporte ZWJ con una huella de memoria mínima (~110MB).
+
+Teniendo en cuenta que Latam es una empresa de tranporte de vuelos muy probablemente el gruso de los emojis qeu hacen referencia a esta y que necesita analizar se da con emojis comunes como y no se requiere un nivel de presición tan grande además al ser pequeña la difenrecia enetre usar **regex** y **regex con ZWJ support**, se decide hacer uso de estas ultimas. Pese a qeu previamente se había mencionado la preferencia por usar la librería emoji.
+
+#### 4.2.3. Pregunta 3: Top 10 Usuarios Influyentes (Menciones)
+
+El procesamiento de metadatos (`mentionedUsers`) es rápido, similar a Q1.
+
+| Método | Tiempo (s) | RAM (MB) | Veredicto |
+| :--- | :---: | :---: | :--- |
+| **Polars Lazy** | **0.31** | 664.85 | **1° Tiempo**. `explode` de listas es muy rápido en Polars. |
+| Polars Eager | 0.32 | 735.61 | Rendimiento equivalente a Lazy. |
+| **ORJSON Streaming** | 2.65 | **379.57** | **1° Memoria**. Huella de memoria muy optimizada. |
+| ORJSON + Processing | 6.46 | 806.20 | El costo de IPC (comunicación entre procesos) supera el beneficio. |
+
+**Conclusión**: **Polars** es la opción preferida para analítica rápida de metadatos estructurados. **ORJSON Streaming** sigue siendo el líder en eficiencia de memoria para procesar el dataset completo.
+
+**Nota:** Todos los benchmarks realizados s eencuentran el el archivo [challenge.ipynb](src/challenge.ipynb), para su revisión
 
 
 ## 5. Calidad de Software

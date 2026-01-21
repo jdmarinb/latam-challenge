@@ -2,56 +2,48 @@ import polars as pl
 from datetime import datetime
 from src.common.utils import read_polars as extractor
 
-
 # Modular Functional Blocks returning LazyFrames (Optimized for Time)
-def date_counter(file_path):
-    return (
-        extractor(file_path)
-        .with_columns(
-            pl.col("date")
-            .str.to_datetime(format="%Y-%m-%dT%H:%M:%S%z", strict=False)
-            .dt.date()
-            .alias("date")
-        )
-        .filter(pl.col("date").is_not_null())
-        .group_by("date")
-        .len()
+date_counter = lambda file_path: (
+    extractor(file_path)
+    .with_columns(
+        pl.col("date")
+        .str.to_datetime(format="%Y-%m-%dT%H:%M:%S%z", strict=False)
+        .dt.date()
+        .alias("date")
     )
+    .filter(pl.col("date").is_not_null())
+    .group_by("date")
+    .len()
+)
 
+get_top_k = lambda lf, k: lf.top_k(k, by="len").select("date")
 
-def get_top_k(lf, k):
-    return lf.top_k(k, by="len").select("date")
-
-
-def user_date_counter(file_path, top_dates_lf):
-    return (
-        extractor(file_path)
-        .with_columns(
-            pl.col("date")
-            .str.to_datetime(format="%Y-%m-%dT%H:%M:%S%z", strict=False)
-            .dt.date()
-            .alias("date"),
-            pl.col("user").struct.field("username").alias("username"),
-        )
-        .join(
-            top_dates_lf, on="date"
-        )  # The join acts as a massive filter (Predicate Pushdown)
-        .filter(pl.col("username").is_not_null())
-        .group_by("date", "username")
-        .len()
+user_date_counter = lambda file_path, top_dates_lf: (
+    extractor(file_path)
+    .with_columns(
+        pl.col("date")
+        .str.to_datetime(format="%Y-%m-%dT%H:%M:%S%z", strict=False)
+        .dt.date()
+        .alias("date"),
+        pl.col("user").struct.field("username").alias("username"),
     )
+    .join(
+        top_dates_lf, on="date"
+    )  # The join acts as a massive filter (Predicate Pushdown)
+    .filter(pl.col("username").is_not_null())
+    .group_by("date", "username")
+    .len()
+)
 
-
-def user_ranker(lf):
-    return lf.group_by("date").agg(
-        pl.col("username")
-        .sort_by(["len", "username"], descending=[True, False])
-        .first()
-        .alias("top_user"),
-        pl.col("len")
-        .sum()
-        .alias("day_total_tweets"),  # Re-calculate volume for final ordering
-    )
+user_ranker = lambda lf: lf.group_by("date").agg(
+    pl.col("username")
+    .sort_by(["len", "username"], descending=[True, False])
+    .first()
+    .alias("top_user"),
+    pl.col("len")
+    .sum()
+    .alias("day_total_tweets"),  # Re-calculate volume for final ordering
+)
 
 
 def q1_time(file_path: str) -> list[tuple[datetime.date, str]]:

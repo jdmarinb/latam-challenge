@@ -12,5 +12,4 @@ prompt-toolkit==3.0.36
 detect-secrets==1.5.0
 ipykernel
 pandas
-matplotlib
 emoji

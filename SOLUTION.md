@@ -244,9 +244,43 @@ Si los datos escalaran a billones de registros, se aplicarían estrategias adici
 - ETL que genere agregados horarios/diarios
 - Consultas de "Top 10" instantáneas al leer pre-calculados
 
-## 4. Calidad de Software
 
-### 4.1. Manejo de Errores
+## 4. Benchmarks
+
+Para medir el rendimiento del algoritmo en tiempo y memoria se utilizan las librerias `memory_profiler` y `cProfile` y `pstats` para medir los tiempos como se sugeria en el  [README.md](README.md). Haciendo uso de esta misma función optimizó cada parte del codigo.
+
+### 4.1 Optimización de Lectura de Archivo
+Lo primero a optimizar es la lectura de los datos, comparando todas las metodologías de ingesta evaluadas para el dataset de 400MB.
+
+| Método | Tiempo Real (s) | RAM Pico (MB) | Retorno | Veredicto |
+| :--- | :--- | :--- | :--- | :--- |
+| **Streaming Orjson (Lazy)** | **~3.21** | **~134** | Generador | **Ganador Eficiencia**. |
+| **Chunks Orjson (Lazy)** | **~3.18** | ~171 | Generador | **Rápido** (Batch-ready). |
+| **Polars (Lazy)** | **~0.00** | ~460 | LazyFrame | **Ganador Rendimiento**. |
+| **Polars (Eager)** | **~0.14** | ~400 | DataFrame | **Rápido** (Eager). |
+| **Standard JSON** | ~13.06 | ~1126 | Lista | Lento y costoso en RAM. |
+| **Full Memory** | ~12.03 | ~1525 | Lista | Ineficiente (Redundancia). |
+| **Pandas** | ~15.18 | ~2654 | DataFrame | **Inadecuado** (OOM Risk). |
+
+*\*Polars requiere `infer_schema_length=None` para estabilidad ante tipos de datos inconsistentes.*
+
+**Nota sobre Polars**: Debido a que la versión **Lazy** no materializa los datos de forma inmediata (solo prepara el plan de ejecución), el benchmark reporta tiempos cercanos a cero. Se continuará evaluando **Polars Eager** en paralelo para determinar si su rendimiento bruto de materialización es superior o no una vez que se inicie el procesamiento real de los datos.
+
+#### Análisis Detallado de Rendimiento (Python Profilers)
+Tras aplicar `cProfile` y `pstats`, se identificaron los cuellos de botella técnicos:
+- **Overhead del Parser Nativo**: El método `json.loads` consume el 75% del tiempo en `raw_decode` y manejo de caracteres de escape, tareas que `orjson` delega a Rust para mayor velocidad.
+- **Estrategias Lazy**: Tanto `Streaming Orjson` como `Chunks Orjson` reportan tiempos de inicio de **0.00s**, ya que difieren el procesamiento hasta la iteración, optimizando el flujo en pipelines de datos reactivos.
+- **Overhead de Instrumentación**: Se detectó que el uso de profilers añade hasta un **20% de retraso artificial**. Se optó por un sistema de benchmarking desacoplado para reportar Tiempos Reales exactos.
+
+#### Escalabilidad y Cloud (AWS Lambda)
+1.  **Resiliencia (OOM)**: Ante archivos de 50GB+, `Pandas` y `Full Memory` fallarán. El enfoque de **Streaming** es el único que garantiza estabilidad al mantener un consumo de RAM constante e independiente del tamaño del archivo.
+2.  **Costo Operativo**: Al reducir el tiempo de ejecución en un ~75% mediante `orjson` y paralelismo, se optimiza el costo por GB-segundo en entornos Serverless.
+3.  **Veredicto**: Se selecciona **Streaming con orjson** para `_memory` (predictibilidad) y **Polars/Multiprocesamiento** para `_time` (throughput).
+
+
+## 5. Calidad de Software
+
+### 5.1. Manejo de Errores
 
 Basado en el análisis del dataset, se implementan las siguientes estrategias:
 

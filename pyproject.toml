@@ -7,3 +7,4 @@ update_changelog_on_bump = true
 [tool.ruff]
 line-length = 88
 target-version = "py312"
+exclude = ["*.ipynb"]

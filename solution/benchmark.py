@@ -1,16 +1,23 @@
-import re
-import emoji
-import orjson
-import unicodedata
-import polars as pl
+import os
 import sys
-from collections import Counter
-from typing import Callable
-from collections.abc import Iterable
-from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor
 
-from src.performance import profile_performance
-from src.utils import twitter_schema
+# Local libraries - ensure project root is in sys.path before local imports
+project_root = os.path.abspath(os.path.join(os.getcwd(), ".."))
+if project_root not in sys.path:
+    sys.path.append(project_root)
+
+import re  # noqa: E402
+import emoji  # noqa: E402
+import orjson  # noqa: E402
+import unicodedata  # noqa: E402
+import polars as pl  # noqa: E402
+from collections import Counter  # noqa: E402
+from typing import Callable  # noqa: E402
+from collections.abc import Iterable  # noqa: E402
+from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor  # noqa: E402
+
+from src.common.utils import twitter_schema  # noqa: E402
+from src.common.performance import profile_performance  # noqa: E402
 
 file_path = "farmers-protest-tweets-2021-2-4.json"
 
@@ -124,7 +131,7 @@ def process_q2_parallel_worker(chunk: list[bytes]) -> Counter:
 
 
 def process_q2_regex_functional(tweets: Iterable[dict]) -> int:
-    """Extrae emojis usando Regex simple (Rápido pero menos preciso)."""
+    """Extrae emojis usando Regex simple (Rápido pero menos preciso). Dos."""
     # Regex para Python (Soporta escapes \u)
     emoji_pattern = re.compile(
         r"[\u2600-\u27BF]|[\U0001F300-\U0001F6FF]|[\U0001F900-\U0001F9FF]"

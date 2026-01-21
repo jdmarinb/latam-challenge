@@ -343,7 +343,7 @@ Basado en el análisis del dataset, se implementan las siguientes estrategias:
 - **Hallazgo**: Formato ISO 8601 incluye offsets de zona horaria
 - **Solución**: Extraer solo `.date()` para agrupamiento de Q1
 
-### 4.2. Estrategia de Testing Robustecida
+### 5.2. Estrategia de Testing Robustecida
 
 Dada la naturaleza volátil de los datos sociales, se implementa una suite de pruebas basada en casos reales detectados:
 
@@ -364,8 +364,12 @@ Dada la naturaleza volátil de los datos sociales, se implementa una suite de pr
 - **`Ruff`**: Garantiza que el código sigue estándares de la comunidad (PEP8) y está libre de *dead code*.
 - **`detect-secrets`**: Escaneo preventivo para asegurar que no se filtren credenciales de la API de Twitter en los scripts.
 
+## 5.4. Implementación
+Apoyado en el analisis realizado en el punto **2.4.** y siguiendo las estrategias de los puntos **5.1.**, **5.2.** y **5.3.**. Se desarrollan los test unitarios con apoyo de un agente de programación.
 
-### Escalamiento a Big Data
+###  Posibles mejoras
+
+#### Escalamiento en Big-data
 
 Si los datos escalaran a billones de registros, se aplicarían estrategias adicionales que requieren infraestructura y cambio de tecnologias, probablemente spark o flink:
 

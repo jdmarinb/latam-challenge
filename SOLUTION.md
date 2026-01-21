@@ -191,91 +191,71 @@ Tras un análisis estadístico de 10,000 registros, se identificaron los siguien
 
 ## 3. Estrategias de Optimización y Arquitectura
 
-### 3.1. Optimización de Tiempo (Latencia)
-**Objetivo**: Minimizar el tiempo de respuesta aprovechando el paralelismo.
+Una de las estrategias centrales es aprovechar capacidades nativas y librerías optimizadas para maximizar la eficiencia en ambos frentes:
 
-- **Multiprocesamiento con `concurrent.futures`**: Dado que el parsing de JSON es intensivo en CPU, se distribuye la carga en un `ProcessPoolExecutor`.
-- **Chunking Adaptativo**: En lugar de enviar línea por línea a los workers (alto costo de IPC), se envían bloques de ~5,000 líneas. Esto balancea el uso de núcleos con el costo de comunicación entre procesos.
-- **Parser de alto rendimiento (`orjson`)**: Implementado por su capacidad de serializar/deserializar a velocidades cercanas a C, manejando nativamente objetos de fecha y reduciendo el tiempo de parsing en un ~40%.
-- **Agregación por Worker**: Cada proceso hijo realiza una pre-agregación local (usando `Counter`). El proceso principal solo combina los resultados parciales (MapReduce simplificado), minimizando el volumen de datos transferidos.
+- **String Interning (`sys.intern`)**:
+  - **Memoria**: Basado en un **ratio de repetición de 2.20x**, esta técnica fuerza a Python a reutilizar el mismo objeto en RAM para valores idénticos. Reduce el *footprint* al evitar duplicados de texto denso en los diccionarios de Q1 y Q3.
+  - **Tiempo**: Acelera los agrupamientos y búsquedas, ya que las comparaciones entre strings "internados" se realizan por dirección de memoria (punteros) en lugar de evaluar carácter por carácter.
+
+- **Normalización On-the-fly**:
+  - **Memoria**: Al aplicar Unicode NFKC y conversión a minúsculas *durante* la lectura, evitamos duplicar estructuras de datos (versión original vs procesada).
+  - **Tiempo**: Implementa un patrón de **Single Pass** (pasada única), eliminando la latencia de recorrer el dataset múltiples veces para limpieza y agregación.
+
+
+### 3.1. Optimización de Tiempo (Latencia)
+
+**`polars`:** Al representar un archivo `Json` de manera columnar atravez de Apache Arrow lo que permite hacer **Projection Pushdown** y **Predicate Pushdown** automaticamente; en su modo Lazy. Por lo que sera una opción a considerar principalmente en la optimización de tiempo. Al ser **Multi-thread** divide el archivo en __"Chunks"__ de tamaño óptimo para maximizar el uso de los hilos del CPU sin saturar la comunicación. Adicionalmente al ser **Single Node** (los hilos intercambian datos en la RAM) y no distribuido como Spark (los nodos intercambian dato spor la RED), el shuffle no es tan costoso, lo qeu lo hace ideal para este caso en que mos archivos noestan particionados (JSON). Adicionalmente al estar programado en `rust` es multihilo loq eu lo hace más eficiente para procesamiento en paralelo que usar `ProcessPoolExecutor`. Adicionalmente s epeude aprovechar la vectoricación + SIMD nativa del paquete, pese a no ser ser el mejor escenario (operaciones númericas), agrega eficiencia por ejemplo al realizar funciones de agregación. Además de esto como cualquier motor de procesamiento por columnas se ve beneficiado cuando se le indica el esquema de las varaibles en lugar de dejar que este las infiera.
 
 ### 3.2. Optimización de Memoria (Footprint)
-**Objetivo**: Mantener un consumo de RAM estable (<500MB) independientemente del tamaño del dataset.
 
-- **Streaming de E/S con Generadores**: Se implementa un patrón de lectura perezosa (`lazy loading`) que mantiene solo un buffer de lectura en memoria, nunca el archivo completo.
-- **String Interning (`sys.intern`)**: Basado en el hallazgo de un **ratio de repetición de 2.20x**, se aplica interning a los usernames. Esto reduce la fragmentación de la memoria al reutilizar el mismo objeto string para usuarios recurrentes en Q1 y Q3.
-- **Procesamiento de Un Solo Paso (Single Pass)**: Los algoritmos están diseñados para recorrer el archivo una sola vez, manteniendo solo contadores (agregados) en lugar de listas de objetos crudos.
-- **Normalización On-the-fly**: La normalización Unicode y conversión a minúsculas se realiza durante la lectura, evitando duplicar estructuras de datos en memoria.
+**`orjson`:** Es un motor de parsing y serialización JSON de alto rendimiento implementado en Rust. Supera al módulo estándar de Python al procesar directamente estructuras de bytes y datetime, eliminando el overhead de decodificación y transformación de tipos. Reduce significativamente la latencia de CPU en la deserialización y habilita un patrón de lectura en streaming (procesamiento secuencial). Al usar algoritmos **Single Pass** permite iterar sobre grandes volúmenes de datos manteniendo una huella de memoria (memory footprint) constante y mínima, independientemente del tamaño total del archivo. Combinado con programación funcional  **`itertools`** **`collections.Counter`**  Evita crear listas intermedias de objetos. `Counter` es un `dict` optimizado en C.
 
-### 3.3. Funciones Especializadas vs Genéricas
-Se optó por **implementaciones desacopladas por pregunta** por las siguientes razones de arquitectura:
 
-1.  **Reducción de Presión de Memoria**: Una función genérica cargaría el objeto JSON completo. Las especializadas solo extraen los campos detectados como necesarios en la sección 2.3 (ej: Q3 ignora el campo `content`, ahorrando el procesamiento de strings largos de hasta 852 caracteres).
-2.  **Data Locality**: Al enfocarse en campos específicos, se reduce el *thrashing* de caché durante el parsing.
-3.  **Mantenibilidad**: Permite aplicar optimizaciones específicas por tipo de dato (ej: librerías de emojis solo en Q2) sin ensuciar la lógica de las demás preguntas.
-
-### 3.4. Decisiones de Diseño por Pregunta
+### 3.3. Decisiones de Diseño por Pregunta
 
 | Pregunta | Estrategia Técnica | Justificación Basada en Exploración |
 | :--- | :--- | :--- |
 | **Q1** | Agrupación Híbrida (ID + Map) | Evita fragmentación por cambio de usernames; garantiza integridad del conteo histórico. |
-| **Q2** | Análisis de Grafemas (ZWJ) | Detectado en exploración (1,188 emojis complejos); garantiza que `👨‍👩‍👧‍👦` no se cuente como 4 personas. |
+| **Q2** | Análisis de Grafemas (ZWJ) librería **`emoji`** | Detectado en exploración (1,188 emojis complejos); garantiza que `👨‍👩‍👧‍👦` no se cuente como 4 personas. |
 | **Q3** | Metadata-First (No Regex) | Evita 15% de falsos positivos y captura 14% de menciones "invisibles" (replies/metadata). |
 
-### 3.5. Escalamiento a Big Data
-
-Si los datos escalaran a billones de registros, se aplicarían estrategias adicionales que requieren infraestructura:
-
-**1. Formato Columnar (Parquet/Avro):**
-- Permite leer solo columnas necesarias (ej: solo `date` y `user`)
-- Compresión de strings repetitivos (usernames)
-- Reduce drásticamente I/O y memoria
-
-**2. Particionamiento:**
-- Particionar físicamente por `year/month/day`
-- El motor ignora carpetas que no coinciden con el rango consultado
-
-**3. Probabilistic Data Structures:**
-- **HyperLogLog**: conteos de cardinalidad (Q3) con error mínimo
-- **Count-Min Sketch**: frecuencias de top-k (Q2)
-- Memoria fija (KB en lugar de GB)
-
-**4. Pre-agregación:**
-- ETL que genere agregados horarios/diarios
-- Consultas de "Top 10" instantáneas al leer pre-calculados
-
+**Nota:** En la pregunta 2 se utiliza la librería **`emoji`**, aportando la garantía técnica para manejar secuencias ZWJ (Zero Width Joiners) y modificadores de tono de piel. Sin ella, los conteos de Q2 serían erróneos al fragmentar grafemas. Además sustituye el uso de expresiones regulares (Regex) masivas por algoritmos de búsqueda optimizados, reduciendo el costo de CPU asociado al *backtracking* de patrones complejos.
 
 ## 4. Benchmarks
 
 Para medir el rendimiento del algoritmo en tiempo y memoria se utilizan las librerias `memory_profiler` y `cProfile` y `pstats` para medir los tiempos como se sugeria en el  [README.md](README.md). Haciendo uso de esta misma función optimizó cada parte del codigo.
 
-### 4.1 Optimización de Lectura de Archivo
+### 4.1 Lectura de Archivo
 Lo primero a optimizar es la lectura de los datos, comparando todas las metodologías de ingesta evaluadas para el dataset de 400MB.
 
 | Método | Tiempo Real (s) | RAM Pico (MB) | Retorno | Veredicto |
 | :--- | :--- | :--- | :--- | :--- |
-| **Streaming Orjson (Lazy)** | **~3.21** | **~134** | Generador | **Ganador Eficiencia**. |
-| **Chunks Orjson (Lazy)** | **~3.18** | ~171 | Generador | **Rápido** (Batch-ready). |
-| **Polars (Lazy)** | **~0.00** | ~460 | LazyFrame | **Ganador Rendimiento**. |
-| **Polars (Eager)** | **~0.14** | ~400 | DataFrame | **Rápido** (Eager). |
-| **Standard JSON** | ~13.06 | ~1126 | Lista | Lento y costoso en RAM. |
-| **Full Memory** | ~12.03 | ~1525 | Lista | Ineficiente (Redundancia). |
-| **Pandas** | ~15.18 | ~2654 | DataFrame | **Inadecuado** (OOM Risk). |
+| **Polars Lazy + Schema** | **~0.00** | **~3138** | LazyFrame | **1° Tiempo 1° Memoria**. (Lazy). |
+| **Streaming/Chunks Orjson** | **~0.00** | **~3776** | Generador | **1° Tiempo 2° Memoria** (Lazy). |
+| **Polars Eager + Schema** | **~0.33** | **~4761** | DataFrame | Bueno. (Materialized)|
+| **Polars Lazy (Scan)** | ~0.40 | ~4763 | LazyFrame | Bueno (Inferencia). |
+| **Polars Eager (Read)** | ~6.65 | ~5121 | DataFrame | Lento (Inferencia). |
+| **Standard JSON** | ~9.90 | ~4500 | Lista | Lento (Materialized). |
+| **Pandas read_json** | ~10.41 | ~5492 | DataFrame | **Inadecuado** (OOM Risk). |
+| **Full Memory** | ~11.06 | ~4257 | Lista | Ineficiente (Redundancia). |
 
-*\*Polars requiere `infer_schema_length=None` para estabilidad ante tipos de datos inconsistentes.*
+*\*Polars requiere esquemas fijos (`pl.Struct`) para evitar errores de inferencia.*
 
-**Nota sobre Polars**: Debido a que la versión **Lazy** no materializa los datos de forma inmediata (solo prepara el plan de ejecución), el benchmark reporta tiempos cercanos a cero. Se continuará evaluando **Polars Eager** en paralelo para determinar si su rendimiento bruto de materialización es superior o no una vez que se inicie el procesamiento real de los datos.
+**Nota sobre Polars**: Debido a que la versión **Lazy** no materializa los datos de forma inmediata (solo prepara el plan de ejecución), el benchmark reporta tiempos de 0.00s. Se identificó que al definir el esquema, Polars Lazy reduce su pico de memoria a **~3.1GB**, siendo el método más eficiente dentro de la suite de Polars para la gestión de recursos.
 
 #### Análisis Detallado de Rendimiento (Python Profilers)
-Tras aplicar `cProfile` y `pstats`, se identificaron los cuellos de botella técnicos:
-- **Overhead del Parser Nativo**: El método `json.loads` consume el 75% del tiempo en `raw_decode` y manejo de caracteres de escape, tareas que `orjson` delega a Rust para mayor velocidad.
-- **Estrategias Lazy**: Tanto `Streaming Orjson` como `Chunks Orjson` reportan tiempos de inicio de **0.00s**, ya que difieren el procesamiento hasta la iteración, optimizando el flujo en pipelines de datos reactivos.
-- **Overhead de Instrumentación**: Se detectó que el uso de profilers añade hasta un **20% de retraso artificial**. Se optó por un sistema de benchmarking desacoplado para reportar Tiempos Reales exactos.
+Tras aplicar `cProfile` y `pstats` en un laboratorio modular, se identificaron los cuellos de botella reales:
+- **Overhead de `raw_decode`**: El perfilado de `Standard JSON` reveló que el ~60% del tiempo acumulado (~6.3s de 10.3s totales del profiler) se consume en la función interna de decodificación de strings, justificando el paso a motores de Rust/C como `orjson`.
+- **Overhead de Instrumentación**: Se confirmó que el uso de profilers añade un retraso artificial (ej. de 9.9s real a 11.8s en ejecución profilada), por lo que las métricas finales se basan en mediciones de tiempo "Wall-clock" desacopladas.
 
-#### Escalabilidad y Cloud (AWS Lambda)
-1.  **Resiliencia (OOM)**: Ante archivos de 50GB+, `Pandas` y `Full Memory` fallarán. El enfoque de **Streaming** es el único que garantiza estabilidad al mantener un consumo de RAM constante e independiente del tamaño del archivo.
-2.  **Costo Operativo**: Al reducir el tiempo de ejecución en un ~75% mediante `orjson` y paralelismo, se optimiza el costo por GB-segundo en entornos Serverless.
-3.  **Veredicto**: Se selecciona **Streaming con orjson** para `_memory` (predictibilidad) y **Polars/Multiprocesamiento** para `_time` (throughput).
+
+### 4.2. Procesamiento
+
+Para el procesamiento se evaluan las opciones de lectura elegdas **`polars`** con schema en sus versiones **Lazy** y **Eager** y el procesamiento en formato vectorial, y por otro lado **`orJson`** con procesamiento en el paradigma **funcional**. Ambos metodos en *streamig* y en *batch*.
+
+
+
+
 
 
 ## 5. Calidad de Software
@@ -320,7 +300,30 @@ Dada la naturaleza volátil de los datos sociales, se implementa una suite de pr
 | **Rendimiento** | Archivo Vacío | (Archivo de 0 bytes) | `[]` (Empty List) | Manejo elegante de fuentes de datos sin registros. |
 | **Consistencia** | Paridad Funcional | Dataset de 1,000 registros | `time == memory` | Garantizar que ambas optimizaciones devuelven el mismo Top 10. |
 
-### 4.3. Herramientas de Calidad
+### 5.3. Herramientas de Calidad
 - **`pytest`**: Ejecución de la matriz de pruebas anterior.
 - **`Ruff`**: Garantiza que el código sigue estándares de la comunidad (PEP8) y está libre de *dead code*.
 - **`detect-secrets`**: Escaneo preventivo para asegurar que no se filtren credenciales de la API de Twitter en los scripts.
+
+
+### Escalamiento a Big Data
+
+Si los datos escalaran a billones de registros, se aplicarían estrategias adicionales que requieren infraestructura y cambio de tecnologias, probablemente spark o flink:
+
+**1. Formato Columnar (Parquet/Avro):**
+- Permite leer solo columnas necesarias (ej: solo `date` y `user`)
+- Compresión de strings repetitivos (usernames)
+- Reduce drásticamente I/O y memoria
+
+**2. Particionamiento:**
+- Particionar físicamente por `year/month/day`
+- El motor ignora carpetas que no coinciden con el rango consultado
+
+**3. Probabilistic Data Structures:**
+- **HyperLogLog**: conteos de cardinalidad (Q3) con error mínimo
+- **Count-Min Sketch**: frecuencias de top-k (Q2)
+- Memoria fija (KB en lugar de GB)
+
+**4. Pre-agregación:**
+- ETL que genere agregados horarios/diarios
+- Consultas de "Top 10" instantáneas al leer pre-calculados

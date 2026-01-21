@@ -2,7 +2,10 @@
 -r requirements.txt
 
 # Development and code quality
-pytest
+pytest>=7.0.0
+pytest-cov>=4.0.0
+pytest-mock>=3.10.0
+pytest-xdist>=3.0.0
 pre-commit
 ruff
 commitizen==2.42.1
@@ -10,6 +13,15 @@ commitizen-gitmoji==0.1.1
 questionary==1.10.0
 prompt-toolkit==3.0.36
 detect-secrets==1.5.0
+
+# Development and analysis
 ipykernel
 pandas
-emoji
+emoji>=2.0.0
+orjson>=3.8.0
+polars>=0.20.0
+
+# Testing utilities
+hypothesis>=6.0.0
+faker>=18.0.0
+psutil>=5.9.0

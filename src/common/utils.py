@@ -1,5 +1,5 @@
-import polars as pl
 import orjson
+import polars as pl
 from collections.abc import Iterable
 
 

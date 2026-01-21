@@ -76,4 +76,4 @@ Returns:
 
 ## Solución
 
-La explicación del paso a paso para la solución del reto se encuentra en el archivo [SOLUTION](.\SOLUTION.md)
+La explicación del paso a paso para la solución del reto se encuentra en el archivo [SOLUTION](SOLUTION.md)

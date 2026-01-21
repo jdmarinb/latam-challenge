@@ -1,5 +1,24 @@
 import polars as pl
-from src.common.utils import twitter_schema
+from src.common.utils import read_polars as extractor
+
+
+# Modular Functional Blocks returning LazyFrames (Optimized for Time)
+def mention_extractor(lf):
+    return lf.select(
+        pl.col("mentionedUsers")
+        .explode()
+        .struct.field("username")
+        .str.to_lowercase()
+        .alias("username")
+    ).filter(pl.col("username").is_not_null() & (pl.col("username") != ""))
+
+
+def mention_counter(lf):
+    return lf.group_by("username").len()
+
+
+def get_top_k(lf, k):
+    return lf.top_k(k, by="len")
 
 
 def q3_time(file_path: str) -> list[tuple[str, int]]:
@@ -7,27 +26,15 @@ def q3_time(file_path: str) -> list[tuple[str, int]]:
     Computes the top 10 mentioned users using a clean LazyFrame query.
     Optimized with top_k for performance.
     """
+    # Orchestrated pipeline
     query = (
-        # Read JSON data as a LazyFrame
-        pl.scan_ndjson(file_path, schema=twitter_schema)
-        # Extract the username field from the mentionedUsers list
-        .select(
-            pl.col("mentionedUsers")
-            .explode()
-            .struct.field("username")
-            .str.to_lowercase()
-            .alias("username")
-        )
-        # Filter out invalid or empty usernames
-        .filter(pl.col("username").is_not_null() & (pl.col("username") != ""))
-        # Aggregate counts by username
-        .group_by("username")
-        .len()
-        # Get the top 10 results efficiently using top_k
-        .top_k(10, by="len")
-        # Apply final sorting for consistent output
+        extractor(file_path)
+        .pipe(mention_extractor)
+        .pipe(mention_counter)
+        .pipe(get_top_k, k=10)
         .sort(["len", "username"], descending=[True, False])
     )
 
-    # Collect the results and transform to list of tuples
-    return list(query.collect().iter_rows())
+    # SINGLE EXECUTION
+    result = query.collect()
+    return list(result.iter_rows())

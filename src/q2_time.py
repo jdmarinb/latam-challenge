@@ -1,5 +1,22 @@
 import polars as pl
-from src.common.utils import twitter_schema
+from src.common.utils import read_polars as extractor
+
+
+# Modular Functional Blocks returning LazyFrames (Optimized for Time)
+def emoji_extractor(lf, regex):
+    return (
+        lf.select(pl.col("content").str.extract_all(regex).alias("emoji"))
+        .explode("emoji")
+        .filter(pl.col("emoji").is_not_null())
+    )
+
+
+def emoji_counter(lf):
+    return lf.group_by("emoji").len()
+
+
+def get_top_k(lf, k):
+    return lf.top_k(k, by="len")
 
 
 def q2_time(file_path: str) -> list[tuple[str, int]]:
@@ -10,21 +27,15 @@ def q2_time(file_path: str) -> list[tuple[str, int]]:
     # Optimized regex for capturing emojis including ZWJ sequences and skin modifiers
     emoji_regex = r"(?:[\U0001f1e6-\U0001f1ff]{2}|[\p{Emoji_Presentation}\p{Extended_Pictographic}](?:\p{EMod}|\ufe0f\u200d[\p{Emoji_Presentation}\p{Extended_Pictographic}])*+)"
 
+    # Orchestrated pipeline
     query = (
-        pl.scan_ndjson(file_path, schema=twitter_schema)
-        # Extract and explode emojis into separate rows
-        .select(pl.col("content").str.extract_all(emoji_regex).alias("emoji"))
-        .explode("emoji")
-        # Filter out tweets without emojis
-        .filter(pl.col("emoji").is_not_null())
-        # Aggregate counts
-        .group_by("emoji")
-        .len()
-        # Efficiently retrieve top 10 results
-        .top_k(10, by="len")
-        # Final sort for deterministic results
+        extractor(file_path)
+        .pipe(emoji_extractor, regex=emoji_regex)
+        .pipe(emoji_counter)
+        .pipe(get_top_k, k=10)
         .sort([pl.col("len"), pl.col("emoji")], descending=[True, False])
     )
 
-    # Collect and transform to list of tuples
-    return list(query.collect().iter_rows())
+    # SINGLE EXECUTION
+    result = query.collect()
+    return list(result.iter_rows())

@@ -13,23 +13,11 @@ twitter_schema = {
 }
 
 
-def read_chunks_orjson(file_path: str, chunk_size: int = 5000) -> Iterable[list[dict]]:
-    """Lee y entrega bloques de 5000 registros sin funciones extra."""
-    with open(file_path, "rb") as f:
-        chunk = []
-        for line in f:
-            try:
-                chunk.append(orjson.loads(line))
-                if len(chunk) == chunk_size:
-                    yield chunk
-                    chunk = []
-            except orjson.JSONDecodeError:
-                continue
-        if chunk:
-            yield chunk
+def read_polars(file_path):
+    return lambda file_path: pl.scan_ndjson(file_path, schema=twitter_schema)
 
 
-def read_streaming_orjson(file_path: str) -> Iterable[dict]:
+def read_orjson(file_path: str) -> Iterable[dict]:
     with open(file_path, "rb") as f:
         for line in f:
             try:

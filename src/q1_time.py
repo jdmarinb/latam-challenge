@@ -1,16 +1,31 @@
-from datetime import datetime
 import polars as pl
-from src.common.utils import twitter_schema
+from datetime import datetime
+from src.common.utils import read_polars as extractor
 
 
-def q1_time(file_path: str) -> list[tuple[datetime.date, str]]:
-    """
-    Computes the top 10 dates with most tweets and their most active user.
-    Uses an optimized LazyFrame pipeline with Predicate Pushdown.
-    """
-    # Define the base LazyFrame and normalize common columns
-    lf = (
-        pl.scan_ndjson(file_path, schema=twitter_schema)
+# Modular Functional Blocks returning LazyFrames (Optimized for Time)
+def date_counter(file_path):
+    return (
+        extractor(file_path)
+        .with_columns(
+            pl.col("date")
+            .str.to_datetime(format="%Y-%m-%dT%H:%M:%S%z", strict=False)
+            .dt.date()
+            .alias("date")
+        )
+        .filter(pl.col("date").is_not_null())
+        .group_by("date")
+        .len()
+    )
+
+
+def get_top_k(lf, k):
+    return lf.top_k(k, by="len").select("date")
+
+
+def user_date_counter(file_path, top_dates_lf):
+    return (
+        extractor(file_path)
         .with_columns(
             pl.col("date")
             .str.to_datetime(format="%Y-%m-%dT%H:%M:%S%z", strict=False)
@@ -18,34 +33,46 @@ def q1_time(file_path: str) -> list[tuple[datetime.date, str]]:
             .alias("date"),
             pl.col("user").struct.field("username").alias("username"),
         )
-        .filter(pl.col("date").is_not_null() & pl.col("username").is_not_null())
-    )
-
-    # Calculate Top 10 Days
-    # Optimized using top_k (O(N))
-    top_days_lf = lf.group_by("date").len().top_k(10, by="len")
-
-    # Join and process to find the top user for those specific days
-    query = (
-        lf
-        # Filter rows by joining with top_days_lf
-        .join(top_days_lf, on="date")
-        # Count tweets per user on those days
+        .join(
+            top_dates_lf, on="date"
+        )  # The join acts as a massive filter (Predicate Pushdown)
+        .filter(pl.col("username").is_not_null())
         .group_by("date", "username")
         .len()
-        # Determine the user with the most tweets within each group
-        .group_by("date")
-        .agg(
-            pl.col("username")
-            .sort_by(["len", "username"], descending=[True, False])
-            .first()
-            .alias("top_user"),
-            pl.col("len").sum().alias("day_total_tweets"),
-        )
-        # Final ordering by total volume and date
+    )
+
+
+def user_ranker(lf):
+    return lf.group_by("date").agg(
+        pl.col("username")
+        .sort_by(["len", "username"], descending=[True, False])
+        .first()
+        .alias("top_user"),
+        pl.col("len")
+        .sum()
+        .alias("day_total_tweets"),  # Re-calculate volume for final ordering
+    )
+
+
+def q1_time(file_path: str) -> list[tuple[datetime.date, str]]:
+    """
+    Computes top 10 dates and their most active user using an optimized Lazy pipeline.
+    Maintains modularity for testability while keeping execution fast.
+    """
+    # 1. Plan for Top 10 Dates
+    top_dates_lf = get_top_k(date_counter(file_path), 10)
+
+    # 2. Plan for User activity on those dates
+    user_counts_lf = user_date_counter(file_path, top_dates_lf)
+
+    # 3. Plan for final ranking and sort
+    query = (
+        user_ranker(user_counts_lf)
         .sort(["day_total_tweets", "date"], descending=[True, True])
         .select("date", "top_user")
     )
 
-    # Collect and transform results
-    return list(query.collect().iter_rows())
+    # 4. SINGLE EXECUTION: Polars optimizes the entire DAG here
+    result = query.collect()
+
+    return list(result.iter_rows())

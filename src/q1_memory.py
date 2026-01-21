@@ -1,42 +1,38 @@
 from datetime import datetime
 from collections import Counter
 from functools import reduce
-from src.common.utils import read_streaming_orjson
+from src.common.utils import read_streaming_orjson as extractor
 
 
-def q1_memory(file_path: str) -> list[tuple[datetime.date, str]]:
-    """
-    Identifies the top 10 dates with the most tweets and their most active user.
-    Optimized for memory using orjson streaming and functional pipelines.
-    """
+# Modular Functional Blocks (KISS)
+def get_top_k(counters, k):
+    return [d for d, _ in counters.most_common(k)]
 
-    # 1. First Pass: Count total tweets per date to identify the Top 10
-    date_counts = reduce(
+
+def date_counter(file_path):
+    return reduce(
         lambda acc, date: (acc.update([date]), acc)[1],
-        map(lambda t: t.get("date", "")[:10], read_streaming_orjson(file_path)),
+        map(lambda t: t.get("date", "")[:10], extractor(file_path)),
         Counter(),
     )
 
-    top_10_dates = [d for d, _ in date_counts.most_common(10)]
-    target_dates = frozenset(top_10_dates)
 
-    # 2. Second Pass: Count user activity only for the target dates
-    # We use a reducer to build the map of {(date, user): count}
-    user_date_counts = reduce(
+def user_date_counter(file_path, target_dates):
+    return reduce(
         lambda acc, pair: (acc.update([pair]), acc)[1],
         filter(
             lambda p: p[0] in target_dates,
             map(
                 lambda t: (t.get("date", "")[:10], t.get("user", {}).get("username")),
-                read_streaming_orjson(file_path),
+                extractor(file_path),
             ),
         ),
         Counter(),
     )
 
-    # 3. Aggregation: Determine the best user for each top date with tie-breaking
-    # Structure: {date: (best_user, max_count)}
-    best_users = reduce(
+
+def user_ranker(user_date_counts):
+    return reduce(
         lambda acc, item: (
             lambda d, u, c: (
                 (
@@ -54,9 +50,30 @@ def q1_memory(file_path: str) -> list[tuple[datetime.date, str]]:
         {},
     )
 
-    # 4. Final Formatting: Order by original tweet volume
-    return [
-        (datetime.strptime(d, "%Y-%m-%d").date(), best_users[d][0])
-        for d in top_10_dates
-        if d in best_users
+
+def q1_memory(file_path: str) -> list[tuple[datetime.date, str]]:
+    """
+    Identifies the top 10 dates with the most tweets and their most active user.
+    Uses functional orchestration with reduce for a clean, modular pipeline.
+    """
+
+    # Define the orchestrated pipeline steps
+    pipeline = [
+        # Step 1: Identify top 10 dates
+        lambda _: get_top_k(date_counter(file_path), 10),
+        # Step 2: Get user counts for those dates and find the best users
+        # This step returns a tuple of (top_dates, best_users_map)
+        lambda dates: (
+            dates,
+            user_ranker(user_date_counter(file_path, frozenset(dates))),
+        ),
+        # Step 3: Format the results
+        lambda state: [
+            (datetime.strptime(d, "%Y-%m-%d").date(), state[1][d][0])
+            for d in state[0]
+            if d in state[1]
+        ],
     ]
+
+    # Execute the orchestrated pipeline
+    return reduce(lambda val, step: step(val), pipeline, None)

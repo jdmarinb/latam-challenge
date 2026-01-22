@@ -28,11 +28,20 @@ jobs:
 
       - name: Bootstrap Backend Bucket
         run: |
-          # Usar gcloud storage para mejor integración con la autenticación
-          gcloud storage buckets create gs://${{ vars.GCP_PROJECT_ID }}-lake --location=${{ vars.GCP_REGION }} --project=${{ vars.GCP_PROJECT_ID }} || gcloud storage buckets describe gs://${{ vars.GCP_PROJECT_ID }}-lake
+          # Check de existencia seguro: Crea el bucket solo si no existe.
+          # Esto protege el contenido y el estado de Terraform en entornos existentes.
+          if ! gcloud storage buckets describe gs://${{ vars.GCP_PROJECT_ID }}-lake >/dev/null 2>&1; then
+            echo "El bucket no existe. Inicializando infraestructura base..."
+            gcloud storage buckets create gs://${{ vars.GCP_PROJECT_ID }}-lake \
+              --location=${{ vars.GCP_REGION }} \
+              --project=${{ vars.GCP_PROJECT_ID }}
+          else
+            echo "Bucket detectado. Procediendo con el despliegue seguro del estado."
+          fi
 
       - name: Package Function Code
         run: |
+          # Empaquetado selectivo: solo producción
           zip -r source.zip main.py src/ requirements.txt
           mv source.zip terraform/source.zip
 

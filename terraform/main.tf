@@ -44,7 +44,7 @@ resource "google_cloudfunctions2_function" "tweet_processor" {
   description = "Procesa tweets (Soporta HTTPS y GCS Events)"
 
   build_config {
-    runtime     = "python310"
+    runtime     = "python312"
     entry_point = "entrypoint"
     source {
       storage_source {

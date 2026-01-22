@@ -399,7 +399,7 @@ El paso final es la integración en un entorno de GCP, para esto supondremos que
 graph LR
     A[GCS Bucket: Input] -->|Event: Finalize| B[Pub/Sub Topic]
     B --> C[Cloud Function]
-    C -->|Q1 Result| D[GCS Bucket: Output / Avro]
+    C -->|Q1 Result| D[GCS Bucket: Output / JSON]
     E[HTTP Request] --> C
     C -->|Q2/Q3 Result| F[HTTP JSON Response]
 ```
@@ -408,7 +408,7 @@ graph LR
 1. **Ingesta**: Un archivo JSONL se carga en el bucket de entrada.
 2. **Orquestación**: GCS dispara una notificación a un tópico de **Pub/Sub**.
 3. **Procesamiento**: Una **Cloud Function** (usando el código optimizado de Polars/Orjson) procesa el archivo.
-   - Si es disparada por evento (Batch): Ejecuta **Q1** y guarda el resultado en formato **Avro** para persistencia eficiente.
+   - Si es disparada por evento (Batch): Ejecuta **Q1** y guarda el resultado en GCS para persistencia eficiente.
    - Si es llamada vía HTTP (On-demand): Ejecuta **Q2/Q3** y retorna una repuesta HTTP (JSON).
 4. **Monitoreo**: Logs estructurados se integran automáticamente con **Cloud Logging**.
 

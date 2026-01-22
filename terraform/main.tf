@@ -34,31 +34,25 @@ resource "google_project_service" "apis" {
 
 # --- 2. PERMISOS DE INFRAESTRUCTURA (Eventarc/Storage) ---
 
-# Obtener el número de proyecto automáticamente
 data "google_project" "project" {}
-
-# Cuenta de servicio de Storage de Google
 data "google_storage_project_service_account" "gcs_account" {}
 
-# Darle permiso a GCS para publicar en Pub/Sub (Eventarc)
 resource "google_project_iam_member" "gcs_pubsub_publisher" {
-  project = var.project_id
-  role    = "roles/pubsub.publisher"
-  member  = "serviceAccount:${data.google_storage_project_service_account.gcs_account.email_address}"
+  project    = var.project_id
+  role       = "roles/pubsub.publisher"
+  member     = "serviceAccount:${data.google_storage_project_service_account.gcs_account.email_address}"
   depends_on = [google_project_service.apis]
 }
 
-# Darle permiso al agente de Eventarc
 resource "google_project_iam_member" "eventarc_service_agent" {
-  project = var.project_id
-  role    = "roles/eventarc.serviceAgent"
-  member  = "serviceAccount:service-${data.google_project.project.number}@gcp-sa-eventarc.iam.gserviceaccount.com"
+  project    = var.project_id
+  role       = "roles/eventarc.serviceAgent"
+  member     = "serviceAccount:service-${data.google_project.project.number}@gcp-sa-eventarc.iam.gserviceaccount.com"
   depends_on = [google_project_service.apis]
 }
 
 # --- 3. RECURSOS DE INFRAESTRUCTURA ---
 
-# Bloque de importación automática
 import {
   to = google_storage_bucket.data_lake
   id = "${var.project_id}-lake"
@@ -68,6 +62,21 @@ resource "google_storage_bucket" "data_lake" {
   name          = "${var.project_id}-lake"
   location      = var.region
   force_destroy = true
+}
+
+# 3.1 Tópico Pub/Sub (Garantiza escalabilidad y permite filtrado de prefijo)
+resource "google_pubsub_topic" "tweet_notifications" {
+  name       = "new-tweets"
+  depends_on = [google_project_service.apis]
+}
+
+# 3.2 Notificación de GCS (Solo para la carpeta input/)
+resource "google_storage_notification" "input_notification" {
+  bucket         = google_storage_bucket.data_lake.name
+  payload_format = "JSON_API_V1"
+  topic          = google_pubsub_topic.tweet_notifications.id
+  event_types    = ["OBJECT_FINALIZE"]
+  object_name_prefix = "input/"
 }
 
 resource "google_storage_bucket_object" "source_code" {
@@ -80,7 +89,7 @@ resource "google_storage_bucket_object" "source_code" {
 resource "google_cloudfunctions2_function" "tweet_processor" {
   name        = "tweet-processor"
   location    = var.region
-  description = "Procesa tweets (Soporta HTTPS y GCS Events)"
+  description = "Procesa tweets (HTTPS + PubSub filtrado por /input)"
   depends_on  = [google_project_service.apis, google_project_iam_member.eventarc_service_agent]
 
   build_config {
@@ -95,27 +104,18 @@ resource "google_cloudfunctions2_function" "tweet_processor" {
   }
 
   service_config {
-    max_instance_count             = 1
-    available_memory               = "1Gi"
-    timeout_seconds                = 540
+    max_instance_count = 10
+    available_memory   = "1Gi"
+    timeout_seconds    = 540
     ingress_settings               = "ALLOW_ALL"
     all_traffic_on_latest_revision = true
   }
 
   event_trigger {
     trigger_region = var.region
-    event_type     = "google.cloud.storage.object.v1.finalized"
+    event_type     = "google.cloud.pubsub.topic.v1.messagePublished"
+    pubsub_topic   = google_pubsub_topic.tweet_notifications.id
     retry_policy   = "RETRY_POLICY_DO_NOT_RETRY"
-    event_filters {
-      attribute = "bucket"
-      value     = google_storage_bucket.data_lake.name
-    }
-    # Filtro de carpeta: solo archivos en input/ disparan la función
-    event_filters {
-      attribute = "object"
-      value     = "input/*"
-      operator  = "match-path-pattern"
-    }
   }
 }
 

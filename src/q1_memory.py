@@ -2,61 +2,66 @@ import time
 from datetime import datetime
 from collections import Counter
 from functools import reduce
-from src.common.utils import read_orjson as extractor
+from src.common.utils import read_msgspec, tweet_decoder
 from src.common.logger import canonical_logger
 
 
-# Modular Functional Blocks (KISS)
-get_top_k = lambda counters, k: [d for d, _ in counters.most_common(k)]
+# Modular Functional Blocks (KISS + Type Hints + Docstrings)
 
 
-date_counter = lambda file_path: reduce(
-    lambda acc, date: (acc.update([date]), acc)[1],
-    filter(
-        None, map(lambda t: t.get("date", "")[:10], extractor(file_path))
-    ),  # Strategy 5 & 2
-    Counter(),
-)
+def get_top_k(counters: Counter, k: int) -> list[str]:
+    """Extracts top k keys from a Counter object based on frequency."""
+    return [d for d, _ in counters.most_common(k)]
 
 
-user_date_counter = (
-    lambda file_path, target_dates: reduce(
-        lambda acc, pair: (acc.update([pair]), acc)[1],
-        filter(
-            lambda p: p[0] in target_dates and p[1],  # Strategy 2: Schema inconsistency
-            map(
-                lambda t: (t.get("date", "")[:10], t.get("user", {}).get("username")),
-                extractor(file_path),
-            ),
-        ),
+def date_counter(file_path: str) -> Counter:
+    """Counts tweet occurrences per date using memory-efficient streaming with msgspec validation."""
+    return reduce(
+        lambda acc, t: (acc.update([t.date[:10]]), acc)[1],
+        read_msgspec(file_path, decoder=tweet_decoder),
         Counter(),
     )
-)
 
 
-user_ranker = lambda user_date_counts: reduce(
-    lambda acc, item: (
-        lambda d, u, c: (
-            (
-                acc.update({d: (u, c)})
-                if c > acc.get(d, (None, -1))[1]
-                or (c == acc.get(d, (None, -1))[1] and u < acc.get(d, (None, -1))[0])
-                else None
-            ),
-            acc,
-        )[1]
-    )(item[0][0], item[0][1], item[1]),
-    user_date_counts.items(),
-    {},
-)
+def user_date_counter(file_path: str, target_dates: frozenset[str]) -> Counter:
+    """Counts user activity for specific target dates using validated msgspec objects."""
+    return reduce(
+        lambda acc, t: (
+            (acc.update([(t.date[:10], t.user.username)]), acc)[1]
+            if t.date[:10] in target_dates
+            else acc
+        ),
+        read_msgspec(file_path, decoder=tweet_decoder),
+        Counter(),
+    )
+
+
+def user_ranker(user_date_counts: Counter) -> dict:
+    """Ranks users per date to find the most active one."""
+    return reduce(
+        lambda acc, item: (
+            lambda d, u, c: (
+                (
+                    acc.update({d: (u, c)})
+                    if c > acc.get(d, (None, -1))[1]
+                    or (
+                        c == acc.get(d, (None, -1))[1] and u < acc.get(d, (None, -1))[0]
+                    )
+                    else None
+                ),
+                acc,
+            )[1]
+        )(item[0][0], item[0][1], item[1]),
+        user_date_counts.items(),
+        {},
+    )
 
 
 @canonical_logger(event_name="q1_memory_execution")
 def q1_memory(file_path: str, ctx=None) -> list[tuple[datetime.date, str]]:
     """
     Identifies the top 10 dates with the most tweets and their most active user.
-    Errors are handled using functional composition (Paradigm Integrity).
-    Monadic handling is simulated by map/filter chains that ignore invalid records.
+    Uses msgspec for ultra-fast type validation and Canonical Logging for observability.
     """
     if ctx:
         ctx.add_context(file_path=file_path)

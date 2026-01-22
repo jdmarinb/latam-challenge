@@ -1,54 +1,67 @@
 import time
 import polars as pl
-from datetime import datetime
+from datetime import date
 from src.common.utils import read_polars as extractor
 from src.common.logger import canonical_logger
 
-# Modular Functional Blocks returning LazyFrames (Optimized for Time)
-date_counter = lambda file_path: (
-    extractor(file_path)
-    .with_columns(
-        pl.col("date")
-        .str.to_datetime(format="%Y-%m-%dT%H:%M:%S%z", strict=False)
-        .dt.date()
-        .alias("date")
+# Modular Functional Blocks (KISS + Type Hints + Docstrings)
+
+
+def date_counter(file_path: str) -> pl.LazyFrame:
+    """Creates a LazyFrame pipeline to count tweets per date."""
+    return (
+        extractor(file_path)
+        .with_columns(
+            pl.col("date")
+            .str.to_datetime(format="%Y-%m-%dT%H:%M:%S%z", strict=False)
+            .dt.date()
+            .alias("date")
+        )
+        .filter(pl.col("date").is_not_null())
+        .group_by("date")
+        .len()
     )
-    .filter(pl.col("date").is_not_null())  # Strategy 5 & 2 (Null handling)
-    .group_by("date")
-    .len()
-)
 
-get_top_k = lambda lf, k: lf.top_k(k, by="len").select("date")
 
-user_date_counter = lambda file_path, top_dates_lf: (
-    extractor(file_path)
-    .with_columns(
-        pl.col("date")
-        .str.to_datetime(format="%Y-%m-%dT%H:%M:%S%z", strict=False)
-        .dt.date()
-        .alias("date"),
-        pl.col("user").struct.field("username").alias("username"),
+def get_top_k(lf: pl.LazyFrame, k: int) -> pl.LazyFrame:
+    """Adds top-k selection to the LazyFrame pipeline."""
+    return lf.top_k(k, by="len").select("date")
+
+
+def user_date_counter(file_path: str, top_dates_lf: pl.LazyFrame) -> pl.LazyFrame:
+    """Counts user activity for specific target dates."""
+    return (
+        extractor(file_path)
+        .with_columns(
+            pl.col("date")
+            .str.to_datetime(format="%Y-%m-%dT%H:%M:%S%z", strict=False)
+            .dt.date()
+            .alias("date"),
+            pl.col("user").struct.field("username").alias("username"),
+        )
+        .join(top_dates_lf, on="date")
+        .filter(pl.col("username").is_not_null())
+        .group_by("date", "username")
+        .len()
     )
-    .join(top_dates_lf, on="date")
-    .filter(pl.col("username").is_not_null())  # Strategy 2: Schema consistency
-    .group_by("date", "username")
-    .len()
-)
 
-user_ranker = lambda lf: lf.group_by("date").agg(
-    pl.col("username")
-    .sort_by(["len", "username"], descending=[True, False])
-    .first()
-    .alias("top_user"),
-    pl.col("len").sum().alias("day_total_tweets"),
-)
+
+def user_ranker(lf: pl.LazyFrame) -> pl.LazyFrame:
+    """Ranks users per date to find the most active one."""
+    return lf.group_by("date").agg(
+        pl.col("username")
+        .sort_by(["len", "username"], descending=[True, False])
+        .first()
+        .alias("top_user"),
+        pl.col("len").sum().alias("day_total_tweets"),
+    )
 
 
 @canonical_logger(event_name="q1_time_execution")
-def q1_time(file_path: str, ctx=None) -> list[tuple[datetime.date, str]]:
+def q1_time(file_path: str, ctx=None) -> list[tuple[date, str]]:
     """
     Computes top 10 dates and their most active user using an optimized Lazy pipeline.
-    Errors are handled natively within the Polars expression tree (Vectorized paradigm).
+    Uses Native Typing (Polars Schema) for ultra-fast validation and Canonical Logging.
     """
     if ctx:
         ctx.add_context(file_path=file_path)
@@ -75,9 +88,10 @@ def q1_time(file_path: str, ctx=None) -> list[tuple[datetime.date, str]]:
     if ctx:
         ctx.add_step("plan_final_query", round((time.perf_counter() - t0) * 1000, 4))
 
-    # 4. SINGLE EXECUTION
+    # 4. SINGLE EXECUTION (Validation happens here at Rust level via schema)
     t0 = time.perf_counter()
     result = query.collect()
+
     if ctx:
         ctx.add_step("execution_collect", round((time.perf_counter() - t0) * 1000, 4))
         ctx.add_metric("output_rows", result.height)

@@ -23,6 +23,10 @@ jobs:
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
 
+      - name: Bootstrap Backend Bucket
+        run: |
+          gsutil mb -l ${{ vars.GCP_REGION }} gs://${{ vars.GCP_PROJECT_ID }}-lake || echo "Bucket already exists"
+
       - name: Package Function Code
         run: |
           zip -r source.zip main.py src/ requirements.txt

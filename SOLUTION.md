@@ -452,7 +452,8 @@ export SA_NAME="github-deployer"
 gcloud iam service-accounts create $SA_NAME --display-name="GitHub Deployer"
 
 # 2. Asignar Permisos Administrativos a la SA
-for ROLE in storage.admin pubsub.admin cloudfunctions.admin run.admin iam.serviceAccountUser; do
+# Nota: Se recomiendan roles Admin para que Terraform gestione políticas de IAM (Cloud Run/Eventarc) sin conflictos.
+for ROLE in storage.admin pubsub.admin cloudfunctions.admin run.admin resourcemanager.projectIamAdmin iam.serviceAccountUser; do
   gcloud projects add-iam-policy-binding $PROJECT_ID \
     --member="serviceAccount:$SA_NAME@$PROJECT_ID.iam.gserviceaccount.com" \
     --role="roles/$ROLE"

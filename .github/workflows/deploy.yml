@@ -1,0 +1,38 @@
+name: Cloud Infrastructure & App Deploy
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      TF_VAR_project_id: ${{ vars.GCP_PROJECT_ID }}
+      TF_VAR_region: ${{ vars.GCP_REGION }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Authenticate to GCP
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      - name: Package Function Code
+        run: |
+          zip -r source.zip main.py src/ requirements.txt
+          mv source.zip terraform/source.zip
+
+      - name: Terraform Init
+        run: |
+          terraform -chdir=terraform init \
+            -backend-config="bucket=${{ vars.GCP_PROJECT_ID }}-lake" \
+            -backend-config="prefix=terraform"
+
+      - name: Terraform Apply
+        run: terraform -chdir=terraform apply -auto-approve

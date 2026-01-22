@@ -7,3 +7,7 @@ datetime
 collections
 re
 functools
+google-cloud-storage
+functions-framework
+gcsfs
+fsspec

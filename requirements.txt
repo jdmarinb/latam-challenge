@@ -6,3 +6,5 @@ google-cloud-storage==3.8.0
 functions-framework==3.10.0
 gcsfs==2026.1.0
 fsspec==2026.1.0
+msgspec==0.20.0
+psutil==7.2.1

@@ -3,28 +3,35 @@ import polars as pl
 from src.common.utils import read_polars as extractor
 from src.common.logger import canonical_logger
 
+# Modular Functional Blocks (KISS + Type Hints + Docstrings)
 
-# Modular Functional Blocks returning LazyFrames (Optimized for Time)
-mention_extractor = lambda lf: (
-    lf.select(
+
+def mention_extractor(lf: pl.LazyFrame) -> pl.LazyFrame:
+    """Extracts all mentioned usernames from tweets."""
+    return lf.select(
         pl.col("mentionedUsers")
         .explode()
         .struct.field("username")
         .str.to_lowercase()
         .alias("username")
     ).filter(pl.col("username").is_not_null() & (pl.col("username") != ""))
-)
 
-mention_counter = lambda lf: lf.group_by("username").len()
 
-get_top_k = lambda lf, k: lf.top_k(k, by="len")
+def mention_counter(lf: pl.LazyFrame) -> pl.LazyFrame:
+    """Counts occurrences of each mentioned username."""
+    return lf.group_by("username").len()
+
+
+def get_top_k(lf: pl.LazyFrame, k: int) -> pl.LazyFrame:
+    """Selects the top k mentions based on frequency."""
+    return lf.top_k(k, by="len")
 
 
 @canonical_logger(event_name="q3_time_execution")
 def q3_time(file_path: str, ctx=None) -> list[tuple[str, int]]:
     """
     Computes the top 10 mentioned users using a clean LazyFrame query.
-    Errors are handled natively within the Polars expression tree (Vectorized).
+    Uses Native Typing (Polars Schema) for ultra-fast validation and Canonical Logging.
     """
     if ctx:
         ctx.add_context(file_path=file_path)
@@ -41,9 +48,10 @@ def q3_time(file_path: str, ctx=None) -> list[tuple[str, int]]:
     if ctx:
         ctx.add_step("build_query_plan", round((time.perf_counter() - t0) * 1000, 4))
 
-    # SINGLE EXECUTION
+    # SINGLE EXECUTION (Validation happens here at Rust level via schema)
     t0 = time.perf_counter()
     result = query.collect()
+
     if ctx:
         ctx.add_step("execution_collect", round((time.perf_counter() - t0) * 1000, 4))
         ctx.add_metric("output_rows", result.height)

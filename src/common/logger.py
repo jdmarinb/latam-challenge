@@ -3,6 +3,8 @@ import functools
 import traceback
 import structlog
 import orjson
+import os
+import psutil
 from typing import Callable, Any
 
 
@@ -19,6 +21,12 @@ structlog.configure(
 logger = structlog.get_logger()
 
 
+def get_memory_usage_mb() -> float:
+    """Returns the current process memory usage (RSS) in MB using psutil."""
+    process = psutil.Process(os.getpid())
+    return round(process.memory_info().rss / (1024 * 1024), 2)
+
+
 class WideEventContext:
     """Accumulates context, metrics, and errors for a Wide Event."""
 
@@ -29,7 +37,13 @@ class WideEventContext:
         self.errors = []
 
     def add_step(self, name: str, duration_ms: float, **metadata):
-        self.steps[name] = {"duration_ms": duration_ms, **metadata}
+        # Capture current memory at the end of the step
+        current_mem = get_memory_usage_mb()
+        self.steps[name] = {
+            "duration_ms": duration_ms,
+            "memory_mb": current_mem,
+            **metadata,
+        }
 
     def add_metric(self, name: str, value: Any):
         self.metrics[name] = value
@@ -44,6 +58,7 @@ class WideEventContext:
                 "type": error_type,
                 "message": message,
                 "timestamp": time.time(),
+                "memory_mb": get_memory_usage_mb(),
                 **details,
             }
         )
@@ -53,7 +68,7 @@ def canonical_logger(event_name: str):
     """
     Decorator for Canonical Logging (Wide Events) using structlog.
     Injects a 'ctx' object into the function to accumulate metadata.
-    Emits ONE single structured JSON log event upon completion.
+    Emits ONE single structured JSON log event upon completion with time and memory.
     """
 
     def decorator(func: Callable):
@@ -61,6 +76,7 @@ def canonical_logger(event_name: str):
         def wrapper(*args, **kwargs):
             ctx = WideEventContext()
             start_time = time.perf_counter()
+            start_mem = get_memory_usage_mb()
             status = "success"
             error_reason = None
             stack_trace = None
@@ -76,12 +92,18 @@ def canonical_logger(event_name: str):
                 raise e
             finally:
                 end_time = time.perf_counter()
+                end_mem = get_memory_usage_mb()
                 total_duration_ms = round((end_time - start_time) * 1000, 2)
 
                 log_data = {
                     "event": event_name,
                     "status": status,
                     "total_duration_ms": total_duration_ms,
+                    "memory_usage": {
+                        "start_mb": start_mem,
+                        "end_mb": end_mem,
+                        "delta_mb": round(end_mem - start_mem, 2),
+                    },
                     "context": {
                         "function": func.__name__,
                         **ctx.extra_context,

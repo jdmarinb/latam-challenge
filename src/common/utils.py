@@ -1,4 +1,4 @@
-import orjson
+import msgspec
 import polars as pl
 from collections.abc import Iterable
 import io
@@ -22,6 +22,36 @@ def read_polars(file_path: str):
     return pl.scan_ndjson(file_path, schema=twitter_schema, ignore_errors=True)
 
 
+# --- 2. MSGSPEC STRUCTS (Optimización Memoria/Streaming) ---
+
+
+class User(msgspec.Struct):
+    username: str
+
+
+class Tweet(msgspec.Struct):
+    date: str
+    user: User
+
+
+class ContentTweet(msgspec.Struct):
+    content: str
+
+
+class Mention(msgspec.Struct):
+    username: str
+
+
+class MentionTweet(msgspec.Struct):
+    mentionedUsers: list[Mention] | None
+
+
+# Decodificadores pre-compilados (Performance)
+tweet_decoder = msgspec.json.Decoder(Tweet)
+content_decoder = msgspec.json.Decoder(ContentTweet)
+mention_decoder = msgspec.json.Decoder(MentionTweet)
+
+
 def _get_gcs_blob(file_path: str):
     """Auxiliar para obtener el blob de GCS."""
     from google.cloud import storage
@@ -36,11 +66,23 @@ def _get_gcs_blob(file_path: str):
 
 def read_orjson(file_path: str) -> Iterable[dict]:
     """
-    Generador que lee archivos JSONL línea a línea. Soporta local y GCS (gs://).
+    Mantiene compatibilidad con código existente que usa orjson,
+    pero utiliza msgspec internamente para mayor velocidad si es posible.
     """
+    yield from read_msgspec(file_path, decoder=None)
+
+
+def read_msgspec(file_path: str, decoder=None) -> Iterable:
+    """
+    Generador que lee archivos JSONL línea a línea usando msgspec para validación ultra-rápida.
+    Si decoder es None, usa msgspec para cargar un dict genérico.
+    """
+    if decoder is None:
+        # Cargador de dict genérico ultra-rápido
+        decoder = msgspec.json.Decoder()
+
     if file_path.startswith("gs://"):
         blob = _get_gcs_blob(file_path)
-        # Streaming download
         stream = io.BytesIO()
         blob.download_to_file(stream)
         stream.seek(0)
@@ -51,8 +93,8 @@ def read_orjson(file_path: str) -> Iterable[dict]:
     try:
         for line in file_obj:
             try:
-                yield orjson.loads(line)
-            except orjson.JSONDecodeError:
+                yield decoder.decode(line)
+            except msgspec.DecodeError:
                 continue
     finally:
         file_obj.close()

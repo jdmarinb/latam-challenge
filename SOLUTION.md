@@ -412,6 +412,8 @@ graph LR
    - Si es llamada vía HTTP (On-demand): Ejecuta **Q2/Q3** y retorna una repuesta HTTP (JSON).
 4. **Monitoreo**: Logs estructurados se integran automáticamente con **Cloud Logging**.
 
+**Nota:** Es encesario qeu la cloud function sea de segunda generación para que admita tanto http como pub-sub.
+
 ### 6.3. Configuración y Despliegue
 
 Para que el despliegue automático funcione correctamente, se deben configurar las siguientes variables y secretos en el repositorio de GitHub:

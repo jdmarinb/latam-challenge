@@ -24,7 +24,7 @@ get_top_k = lambda lf, k: lf.top_k(k, by="len")
 def q3_time(file_path: str, ctx=None) -> list[tuple[str, int]]:
     """
     Computes the top 10 mentioned users using a clean LazyFrame query.
-    Optimized with top_k for performance.
+    Errors are handled natively within the Polars expression tree (Vectorized).
     """
     if ctx:
         ctx.add_context(file_path=file_path)

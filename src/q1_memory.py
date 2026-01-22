@@ -12,21 +12,25 @@ get_top_k = lambda counters, k: [d for d, _ in counters.most_common(k)]
 
 date_counter = lambda file_path: reduce(
     lambda acc, date: (acc.update([date]), acc)[1],
-    map(lambda t: t.get("date", "")[:10], extractor(file_path)),
+    filter(
+        None, map(lambda t: t.get("date", "")[:10], extractor(file_path))
+    ),  # Strategy 5 & 2
     Counter(),
 )
 
 
-user_date_counter = lambda file_path, target_dates: reduce(
-    lambda acc, pair: (acc.update([pair]), acc)[1],
-    filter(
-        lambda p: p[0] in target_dates,
-        map(
-            lambda t: (t.get("date", "")[:10], t.get("user", {}).get("username")),
-            extractor(file_path),
+user_date_counter = (
+    lambda file_path, target_dates: reduce(
+        lambda acc, pair: (acc.update([pair]), acc)[1],
+        filter(
+            lambda p: p[0] in target_dates and p[1],  # Strategy 2: Schema inconsistency
+            map(
+                lambda t: (t.get("date", "")[:10], t.get("user", {}).get("username")),
+                extractor(file_path),
+            ),
         ),
-    ),
-    Counter(),
+        Counter(),
+    )
 )
 
 
@@ -51,7 +55,8 @@ user_ranker = lambda user_date_counts: reduce(
 def q1_memory(file_path: str, ctx=None) -> list[tuple[datetime.date, str]]:
     """
     Identifies the top 10 dates with the most tweets and their most active user.
-    Uses functional orchestration with reduce for a clean, modular pipeline.
+    Errors are handled using functional composition (Paradigm Integrity).
+    Monadic handling is simulated by map/filter chains that ignore invalid records.
     """
     if ctx:
         ctx.add_context(file_path=file_path)

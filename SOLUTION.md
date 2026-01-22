@@ -393,6 +393,11 @@ Se usa una estrategia de loggin basado en Cannonical logger (Wide Events), con a
 
 Si los datos escalaran a billones de registros, se aplicarían estrategias adicionales que requieren infraestructura y cambio de tecnologias, probablemente spark o flink:
 
+**5. Estrategia de Manejo de Errores y Calidad de Datos (Próximos Pasos):**
+- **Reporte de Integridad en Log**: En lugar de simplemente omitir registros corruptos, el sistema podría acumular contadores vectoriales (ej: `null_user_ids`, `invalid_usernames`) y emitirlos en el **Wide Event**.
+- **DLQ (Dead Letter Queue)**: Para registros que fallen el parsing estructural, se implementaría una ruta de salida secundaria que almacene el JSON crudo junto con el motivo del fallo (`tweet_id`, `reason`), permitiendo auditorías de calidad de datos sin degradar el rendimiento del pipeline principal.
+- **Validación de Esquema Estricta**: Integrar validadores como Pydantic o esquemas de Apache Arrow más restrictivos para detectar derivas en la estructura de los datos de Twitter (Data Drift).
+
 **1. Formato Columnar (Parquet/Avro):**
 - Permite leer solo columnas necesarias (ej: solo `date` y `user`)
 - Compresión de strings repetitivos (usernames)

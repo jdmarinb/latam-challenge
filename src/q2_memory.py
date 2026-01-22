@@ -29,7 +29,7 @@ emoji_counter = lambda emoji_stream: reduce(
 def q2_memory(file_path: str, ctx=None) -> list[tuple[str, int]]:
     """
     Counts the top 10 most used emojis using a memory-efficient functional pipeline.
-    Uses orjson streaming and reduce with Counter.update for efficiency.
+    Errors are handled natively within the Functional paradigm by stream filtering.
     """
     if ctx:
         ctx.add_context(file_path=file_path)

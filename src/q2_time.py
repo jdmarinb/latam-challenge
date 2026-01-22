@@ -21,6 +21,7 @@ def q2_time(file_path: str, ctx=None) -> list[tuple[str, int]]:
     """
     Finds the top 10 most used emojis across all tweets.
     Uses regex for emoji extraction and top_k for performance.
+    Errors are handled natively within the Polars expression tree (Vectorized).
     """
     if ctx:
         ctx.add_context(file_path=file_path)

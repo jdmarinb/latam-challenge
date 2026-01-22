@@ -20,12 +20,13 @@ logger = structlog.get_logger()
 
 
 class WideEventContext:
-    """Accumulates context and metrics for a Wide Event."""
+    """Accumulates context, metrics, and errors for a Wide Event."""
 
     def __init__(self):
         self.steps = {}
         self.metrics = {}
         self.extra_context = {}
+        self.errors = []
 
     def add_step(self, name: str, duration_ms: float, **metadata):
         self.steps[name] = {"duration_ms": duration_ms, **metadata}
@@ -35,6 +36,17 @@ class WideEventContext:
 
     def add_context(self, **kwargs):
         self.extra_context.update(kwargs)
+
+    def register_error(self, error_type: str, message: str, **details):
+        """Registers a non-fatal error or edge case."""
+        self.errors.append(
+            {
+                "type": error_type,
+                "message": message,
+                "timestamp": time.time(),
+                **details,
+            }
+        )
 
 
 def canonical_logger(event_name: str):
@@ -54,9 +66,6 @@ def canonical_logger(event_name: str):
             stack_trace = None
             result = None
 
-            # Inject ctx into kwargs if the function accepts it
-            # Using a slightly safer approach to check for 'ctx' in signature
-            # but for simplicity in this minimalist environment, we'll just pass it.
             try:
                 result = func(*args, ctx=ctx, **kwargs)
                 return result
@@ -81,11 +90,15 @@ def canonical_logger(event_name: str):
                     "steps": ctx.steps,
                 }
 
+                if ctx.errors:
+                    log_data["non_fatal_errors"] = ctx.errors
+
                 if status == "failure":
                     log_data["failure_reason"] = error_reason
                     log_data["stack_trace"] = stack_trace
-
-                logger.info(**log_data)
+                    logger.error(**log_data)
+                else:
+                    logger.info(**log_data)
 
         return wrapper
 

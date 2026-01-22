@@ -32,7 +32,7 @@ mention_counter = lambda mention_stream: reduce(
 def q3_memory(file_path: str, ctx=None) -> list[tuple[str, int]]:
     """
     Counts the top 10 most mentioned users using a memory-efficient functional pipeline.
-    Uses orjson streaming and reduce with Counter.update.
+    Errors are handled natively within the Functional paradigm by stream filtering.
     """
     if ctx:
         ctx.add_context(file_path=file_path)

@@ -446,14 +446,6 @@ La cuenta de ejecución (**Runtime**) de la función solo requiere:
 export PROJECT_ID="latam-challenge-485101"
 export SA_NAME="github-deployer"
 
-# 0. Habilitar APIs necesarias (Cloud Functions Gen 2)
-gcloud services enable \
-  cloudfunctions.googleapis.com \
-  run.googleapis.com \
-  artifactregistry.googleapis.com \
-  cloudbuild.googleapis.com \
-  eventarc.googleapis.com
-
 # 1. Crear Service Account
 gcloud iam service-accounts create $SA_NAME --display-name="GitHub Deployer"
 

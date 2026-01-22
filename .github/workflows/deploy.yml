@@ -26,6 +26,8 @@ jobs:
       - name: Bootstrap Backend Bucket
         run: |
           gsutil mb -l ${{ vars.GCP_REGION }} gs://${{ vars.GCP_PROJECT_ID }}-lake || echo "Bucket already exists"
+          sleep 10
+          gsutil ls gs://${{ vars.GCP_PROJECT_ID }}-lake
 
       - name: Package Function Code
         run: |

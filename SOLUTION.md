@@ -524,7 +524,43 @@ make test
 python solution/benchmark.py
 ```
 
-### 6.2. Matriz de Decisión: Time vs Memory
+Una vez desplegada la infraestructura, siga estos pasos para validar el flujo completo de datos.
+
+### 6.2. Carga de Datos (Disparador Batch)
+
+Suba el dataset a la carpeta `input/` del bucket creado. Esto disparará automáticamente la Cloud Function a través de Pub/Sub para procesar la **Q1**.
+
+```bash
+# Definir variables de prueba
+export BUCKET_NAME="latam-challenge-485101-lake"
+export FILE_NAME="farmers-protest-tweets-2021-2-4.json"
+
+# Subir archivo al bucket usando gcloud storage
+gcloud storage cp $FILE_NAME gs://$BUCKET_NAME/input/
+```
+
+### 6.3. Verificación de Procesamiento (Pub/Sub)
+
+Para confirmar que el evento fue capturado y procesado, consulte los logs estructurados:
+
+```bash
+# Consultar logs de la última ejecución
+gcloud alpha logging read "resource.type=cloud_function AND resource.labels.function_name=tweet-processor" --limit=10 --format="json"
+```
+
+### 6.4. Consulta On-demand (HTTPS)
+
+Solicite los resultados de las preguntas **Q2** o **Q3** bajo demanda utilizando el archivo ya presente en el bucket.
+
+```bash
+# Ejemplo: Obtener Top 10 Emojis (Q2) con estrategia de Memoria
+curl "https://us-central1-latam-challenge-485101.cloudfunctions.net/tweet-processor?q=q2&strategy=memory&file=gs://$BUCKET_NAME/input/$FILE_NAME"
+
+# Ejemplo: Obtener Top 10 Usuarios influyentes (Q3) con estrategia de Tiempo
+curl "https://us-central1-latam-challenge-485101.cloudfunctions.net/tweet-processor?q=q3&strategy=time&file=gs://$BUCKET_NAME/input/$FILE_NAME"
+```
+
+### Conclusión
 
 Basado en los resultados obtenidos, esta es la recomendación de uso para cada paradigma implementado:
 
@@ -533,8 +569,6 @@ Basado en los resultados obtenidos, esta es la recomendación de uso para cada p
 | **Baja Latencia (Real-time)** | `qX_time` (Polars) | Ideal para dashboards o APIs donde la velocidad es crítica. Aprovecha el paralelismo nativo de Rust. |
 | **Sistemas Legacy / Serverless** | `qX_memory` (Orjson) | Ideal para AWS Lambda o contenedores con poca RAM (512MB o menos). Mantiene un footprint constante. |
 | **Procesamiento de Emojis** | `q2_time` (Regex Robust) | El balance perfecto entre velocidad y soporte para grafemas complejos (ZWJ). |
-
-### 6.3. Reflexión Final
 
 Este reto demuestra que no existe una "bala de plata" en la ingeniería de datos.
 - Mientras que **Polars** redujo los tiempos de procesamiento a menos de **0.5 segundos** (una mejora de ~20x respecto a Python estándar), su uso de memoria es proporcional al volumen de datos en el plan de ejecución.

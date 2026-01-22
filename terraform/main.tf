@@ -95,12 +95,9 @@ resource "google_cloudfunctions2_function" "tweet_processor" {
   }
 
   service_config {
-    max_instance_count = 1
-    available_memory   = "1Gi"
-    timeout_seconds    = 540
-    environment_variables = {
-      INPUT_FILE_PATH = "gs://${google_storage_bucket.data_lake.name}/input/farmers-protest-tweets-2021-2-4.json"
-    }
+    max_instance_count             = 1
+    available_memory               = "1Gi"
+    timeout_seconds                = 540
     ingress_settings               = "ALLOW_ALL"
     all_traffic_on_latest_revision = true
   }
@@ -112,6 +109,12 @@ resource "google_cloudfunctions2_function" "tweet_processor" {
     event_filters {
       attribute = "bucket"
       value     = google_storage_bucket.data_lake.name
+    }
+    # Filtro de carpeta: solo archivos en input/ disparan la función
+    event_filters {
+      attribute = "object"
+      value     = "input/*"
+      operator  = "match-path-pattern"
     }
   }
 }

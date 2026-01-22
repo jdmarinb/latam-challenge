@@ -1,6 +1,6 @@
-terraform {
-  backend "gcs" {}
-}
+# terraform {
+#   backend "gcs" {}
+# }
 
 provider "google" {
   project = var.project_id
@@ -24,31 +24,18 @@ resource "google_storage_bucket" "data_lake" {
   force_destroy = true
 }
 
-# 2. Tópico de Pub/Sub
-resource "google_pubsub_topic" "tweet_notifications" {
-  name = "new-tweets"
-}
-
-# 3. Notificación de GCS a Pub/Sub
-resource "google_storage_notification" "notification" {
-  bucket         = google_storage_bucket.data_lake.name
-  payload_format = "JSON_API_V1"
-  topic          = google_pubsub_topic.tweet_notifications.id
-  event_types    = ["OBJECT_FINALIZE"]
-}
-
-# 4. Código fuente (ZIP)
+# 2. Código fuente (ZIP)
 resource "google_storage_bucket_object" "source_code" {
   name   = "function-source.zip"
   bucket = google_storage_bucket.data_lake.name
   source = "./source.zip"
 }
 
-# 5. Cloud Function Gen 2 (Usa cuenta por defecto para rapidez)
+# 3. Cloud Function Gen 2
 resource "google_cloudfunctions2_function" "tweet_processor" {
   name        = "tweet-processor"
   location    = var.region
-  description = "Procesa tweets (Soporta HTTPS y PubSub)"
+  description = "Procesa tweets (Soporta HTTPS y GCS Events)"
 
   build_config {
     runtime     = "python310"
@@ -74,13 +61,16 @@ resource "google_cloudfunctions2_function" "tweet_processor" {
 
   event_trigger {
     trigger_region = var.region
-    event_type     = "google.cloud.pubsub.topic.v1.messagePublished"
-    pubsub_topic   = google_pubsub_topic.tweet_notifications.id
+    event_type     = "google.cloud.storage.object.v1.finalized"
     retry_policy   = "RETRY_POLICY_DO_NOT_RETRY"
+    event_filters {
+      attribute = "bucket"
+      value     = google_storage_bucket.data_lake.name
+    }
   }
 }
 
-# Permitir invocación pública (Opcional, para pruebas HTTP)
+# Permitir invocación pública (Pruebas HTTP)
 resource "google_cloud_run_service_iam_member" "public_invoker" {
   location = google_cloudfunctions2_function.tweet_processor.location
   project  = google_cloudfunctions2_function.tweet_processor.project

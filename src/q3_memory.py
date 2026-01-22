@@ -1,6 +1,8 @@
+import time
 from functools import reduce
 from collections import Counter
 from src.common.utils import read_orjson as extractor
+from src.common.logger import canonical_logger
 
 
 # Modular Functional Blocks (KISS)
@@ -26,20 +28,33 @@ mention_counter = lambda mention_stream: reduce(
 )
 
 
-def q3_memory(file_path: str) -> list[tuple[str, int]]:
+@canonical_logger(event_name="q3_memory_execution")
+def q3_memory(file_path: str, ctx=None) -> list[tuple[str, int]]:
     """
     Counts the top 10 most mentioned users using a memory-efficient functional pipeline.
     Uses orjson streaming and reduce with Counter.update.
     """
-    # Define orchestrated pipeline steps
-    pipeline = [
-        # Step 1: Extract mentions from stream
-        lambda _: mention_extractor(file_path),
-        # Step 2: Aggregate counts
-        lambda mention_stream: mention_counter(mention_stream),
-        # Step 3: Get Top 10 with deterministic tie-breaking
-        lambda counter: get_top_k(counter, 10),
-    ]
+    if ctx:
+        ctx.add_context(file_path=file_path)
 
-    # Execute the orchestrated pipeline
-    return reduce(lambda val, step: step(val), pipeline, None)
+    # Define orchestrated pipeline steps
+    t0 = time.perf_counter()
+    mention_stream = mention_extractor(file_path)
+    if ctx:
+        ctx.add_step(
+            "create_extraction_stream", round((time.perf_counter() - t0) * 1000, 4)
+        )
+
+    t0 = time.perf_counter()
+    counter = mention_counter(mention_stream)
+    if ctx:
+        ctx.add_step("aggregate_counts", round((time.perf_counter() - t0) * 1000, 4))
+        ctx.add_metric("unique_mentions", len(counter))
+
+    t0 = time.perf_counter()
+    result = get_top_k(counter, 10)
+    if ctx:
+        ctx.add_step("get_top_10", round((time.perf_counter() - t0) * 1000, 4))
+        ctx.add_metric("output_rows", len(result))
+
+    return result

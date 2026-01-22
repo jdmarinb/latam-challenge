@@ -1,7 +1,9 @@
 import re
+import time
 from functools import reduce
 from collections import Counter
 from src.common.utils import read_orjson as extractor
+from src.common.logger import canonical_logger
 
 
 # Modular Functional Blocks (KISS)
@@ -23,11 +25,15 @@ emoji_counter = lambda emoji_stream: reduce(
 )
 
 
-def q2_memory(file_path: str) -> list[tuple[str, int]]:
+@canonical_logger(event_name="q2_memory_execution")
+def q2_memory(file_path: str, ctx=None) -> list[tuple[str, int]]:
     """
     Counts the top 10 most used emojis using a memory-efficient functional pipeline.
     Uses orjson streaming and reduce with Counter.update for efficiency.
     """
+    if ctx:
+        ctx.add_context(file_path=file_path)
+
     # Regex for capturing emojis (including ZWJ and modifiers)
     emoji_regex = re.compile(
         r"("
@@ -39,14 +45,23 @@ def q2_memory(file_path: str) -> list[tuple[str, int]]:
     )
 
     # Define orchestrated pipeline steps
-    pipeline = [
-        # Step 1: Extract emojis from stream
-        lambda _: emoji_extractor(file_path, emoji_regex),
-        # Step 2: Aggregate counts
-        lambda emoji_stream: emoji_counter(emoji_stream),
-        # Step 3: Get Top 10 with deterministic tie-breaking
-        lambda counter: get_top_k(counter, 10),
-    ]
+    t0 = time.perf_counter()
+    emoji_stream = emoji_extractor(file_path, emoji_regex)
+    if ctx:
+        ctx.add_step(
+            "create_extraction_stream", round((time.perf_counter() - t0) * 1000, 4)
+        )
 
-    # Execute the orchestrated pipeline
-    return reduce(lambda val, step: step(val), pipeline, None)
+    t0 = time.perf_counter()
+    counter = emoji_counter(emoji_stream)
+    if ctx:
+        ctx.add_step("aggregate_counts", round((time.perf_counter() - t0) * 1000, 4))
+        ctx.add_metric("unique_emojis", len(counter))
+
+    t0 = time.perf_counter()
+    result = get_top_k(counter, 10)
+    if ctx:
+        ctx.add_step("get_top_10", round((time.perf_counter() - t0) * 1000, 4))
+        ctx.add_metric("output_rows", len(result))
+
+    return result

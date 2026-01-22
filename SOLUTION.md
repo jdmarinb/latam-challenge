@@ -314,8 +314,24 @@ El procesamiento de metadatos (`mentionedUsers`) es rápido, similar a Q1.
 
 **Conclusión**: **Polars** es la opción preferida para analítica rápida de metadatos estructurados. **ORJSON Streaming** sigue siendo el líder en eficiencia de memoria para procesar el dataset completo.
 
-**Nota:** Todos los benchmarks realizados s eencuentran el el archivo [challenge.ipynb](src/challenge.ipynb), para su revisión
+**Nota:** Todos los benchmarks realizados se encuentran el el archivo [challenge.ipynb](solucion/challenge.ipynb), para su revisión y los benchmarks principales se programaron ene el archivo y los resultado en el archivo [benchmark_results.txt](solucion/benchmark_results.txt).
 
+### 4.3. Resultados Finales de Benchmarking
+
+Tras la implementación del **Canonical Logger (Wide Events)** y el perfilado exhaustivo con `cProfile`, se obtuvieron los siguientes resultados finales para el dataset completo (~400MB):
+
+| Función | Tiempo Real (s) | Memoria Pico (MB) | Cuello de Botella (cProfile) | Latencia Crítica (Pasos del Log) |
+| :--- | :---: | :---: | :--- | :--- |
+| **Q1 Time** | 0.4752 | 516.50 | `pl.LazyFrame.collect` | `execution_collect`: 471.78ms |
+| **Q1 Memory** | 9.0248 | 187.09 | `reduce` + `orjson.loads` | `count_users`: 4635.82ms |
+| **Q2 Time** | 0.4323 | 517.61 | `str.extract_all` (Regex) | `execution_collect`: 430.58ms |
+| **Q2 Memory** | 4.5875 | 207.40 | `re.findall` | `aggregate_counts`: 4584.47ms |
+| **Q3 Time** | 0.4784 | 634.33 | `explode` + `collect` | `execution_collect`: 477.15ms |
+| **Q3 Memory** | 3.8086 | 310.55 | `orjson.loads` | `aggregate_counts`: 3758.52ms |
+
+**Observaciones clave de observabilidad:**
+- El **Canonical Logger** permitió identificar que el 99% del tiempo en las versiones `Time` se consume en la etapa de materialización (`collect`), mientras que en las versiones `Memory` el costo principal reside en la deserialización de JSON línea a línea.
+- El overhead del logger Wide Event es despreciable (microsegundos), aportando una trazabilidad total por cada unidad de trabajo.
 
 ## 5. Calidad de Software
 
@@ -364,10 +380,14 @@ Dada la naturaleza volátil de los datos sociales, se implementa una suite de pr
 - **`Ruff`**: Garantiza que el código sigue estándares de la comunidad (PEP8) y está libre de *dead code*.
 - **`detect-secrets`**: Escaneo preventivo para asegurar que no se filtren credenciales de la API de Twitter en los scripts.
 
-## 5.4. Implementación
+### 5.4. Implementación
 Apoyado en el analisis realizado en el punto **2.4.** y siguiendo las estrategias de los puntos **5.1.**, **5.2.** y **5.3.**. Se desarrollan los test unitarios con apoyo de un agente de programación.
 
-###  Posibles mejoras
+## 5.5 Obserbabilidad
+Se usa una estrategia de loggin basado en Cannonical logger (Wide Events), con ayuda de la IA se implementa un logger con **`structlog`**  para monitorear el comportamiento del sistema en producción. Los logs se guardan en `logs/app.log` y se configuran para registrar:
+- **Errores críticos** (corrupción de datos, fallos de lectura)
+- **Eventos de auditoría** (tweets procesados, métricas calculadas)
+- **Métricas de rendimiento** (tiempos de procesamiento por paso)
 
 #### Escalamiento en Big-data
 

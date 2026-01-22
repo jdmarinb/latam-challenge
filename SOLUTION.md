@@ -383,11 +383,95 @@ Dada la naturaleza volátil de los datos sociales, se implementa una suite de pr
 ### 5.4. Implementación
 Apoyado en el analisis realizado en el punto **2.4.** y siguiendo las estrategias de los puntos **5.1.**, **5.2.** y **5.3.**. Se desarrollan los test unitarios con apoyo de un agente de programación.
 
-## 5.5 Obserbabilidad
+### 5.5 Obserbabilidad
 Se usa una estrategia de loggin basado en Cannonical logger (Wide Events), con ayuda de la IA se implementa un logger con **`structlog`**  para monitorear el comportamiento del sistema en producción. Los logs se guardan en `logs/app.log` y se configuran para registrar:
 - **Errores críticos** (corrupción de datos, fallos de lectura)
 - **Eventos de auditoría** (tweets procesados, métricas calculadas)
 - **Métricas de rendimiento** (tiempos de procesamiento por paso)
+
+
+## 6. Despliegue en la nube
+
+El paso final es la integración en un entorno de GCP, para esto supondremos que el proceso sera el siguiente
+
+
+```mermaid
+graph LR
+    A[GCS Bucket: Input] -->|Event: Finalize| B[Pub/Sub Topic]
+    B --> C[Cloud Function]
+    C -->|Q1 Result| D[GCS Bucket: Output / Avro]
+    E[HTTP Request] --> C
+    C -->|Q2/Q3 Result| F[HTTP JSON Response]
+```
+
+**Flujo de Trabajo:**
+1. **Ingesta**: Un archivo JSONL se carga en el bucket de entrada.
+2. **Orquestación**: GCS dispara una notificación a un tópico de **Pub/Sub**.
+3. **Procesamiento**: Una **Cloud Function** (usando el código optimizado de Polars/Orjson) procesa el archivo.
+   - Si es disparada por evento (Batch): Ejecuta **Q1** y guarda el resultado en formato **Avro** para persistencia eficiente.
+   - Si es llamada vía HTTP (On-demand): Ejecuta **Q2/Q3** y retorna una repuesta HTTP (JSON).
+4. **Monitoreo**: Logs estructurados se integran automáticamente con **Cloud Logging**.
+
+### 6.3. Configuración y Despliegue
+
+Para que el despliegue automático funcione correctamente, se deben configurar las siguientes variables y secretos en el repositorio de GitHub:
+
+| Nombre | Tipo | Descripción |
+| :--- | :--- | :--- |
+| `GCP_SA_KEY` | **Secret** | JSON Key completo (crudo) de la Service Account. |
+| `GCP_PROJECT_ID` | **Variable** | ID único del proyecto en Google Cloud Platform. |
+| `GCP_REGION` | **Variable** | Región de despliegue (ej: `us-central1`). |
+
+*Nota: La variable `INPUT_FILE_PATH` es gestionada automáticamente por Terraform bajo el esquema `gs://{bucket}/input/`.*
+
+#### Permisos de IAM Requeridos
+
+Para un despliegue exitoso, la Service Account de GitHub Actions debe tener los siguientes roles:
+1. **`roles/storage.admin`**: Gestión de buckets y artefactos de código.
+2. **`roles/pubsub.admin`**: Creación de tópicos para notificaciones.
+3. **`roles/cloudfunctions.developer`**: Despliegue de la lógica serverless.
+4. **`roles/iam.serviceAccountUser`**: Permiso para asignar la cuenta de servicio a la función.
+5. **`roles/resourcemanager.projectIamAdmin`**: (Opcional) si Terraform debe gestionar permisos de IAM.
+
+La cuenta de ejecución (**Runtime**) de la función solo requiere:
+- **`roles/storage.objectViewer`** (Lectura de Input).
+- **`roles/storage.logging.logWriter`** (Escritura de Logs).
+
+#### Comandos para Configuración Rápida (GCP Shell)
+
+```bash
+# Definir variables
+export PROJECT_ID="latam-challenge-485101"
+export SA_NAME="github-deployer"
+
+# 1. Crear Service Account
+gcloud iam service-accounts create $SA_NAME --display-name="GitHub Deployer"
+
+# 2. Asignar Roles
+for ROLE in storage.admin pubsub.admin cloudfunctions.developer iam.serviceAccountUser; do
+  gcloud projects add-iam-policy-binding $PROJECT_ID \
+    --member="serviceAccount:$SA_NAME@$PROJECT_ID.iam.gserviceaccount.com" \
+    --role="roles/$ROLE"
+done
+
+# 3. Generar Llave JSON (Copiar contenido en secreto GCP_SA_KEY de GitHub)
+gcloud iam service-accounts keys create github-key.json \
+  --iam-account=$SA_NAME@$PROJECT_ID.iam.gserviceaccount.com
+```
+
+Pasos:
+1. Configurar una cuenta de servicio como variable de entorno en el repositorio de github
+2. Acondicionar el codigo
+  - Hacer que la funciones de lectura puedan leer desde GCS
+  - Crear una función apra escribir el resultado tambien en GCS
+  - Crear el archivo main.py (functions framework), qeu permita recibir los parametros por http y llamar a las funciones correspondientes
+3. desarrollar la IasC con Terraform en un carpeta terraform
+   - Bucket de
+   - Cloud Function
+   - Pub/Sub
+   - almacenamiento de logs en GCP
+4. Crear un workflow de github actions que haga el deploy
+5. Probar el sistema con un archivo de prueba usando el archivo de la prueba
 
 #### Escalamiento en Big-data
 
@@ -415,3 +499,38 @@ Si los datos escalaran a billones de registros, se aplicarían estrategias adici
 **4. Pre-agregación:**
 - ETL que genere agregados horarios/diarios
 - Consultas de "Top 10" instantáneas al leer pre-calculados
+
+## 6. Ejecución y Conclusiones Finales
+
+### 6.1. Guía de Inicio Rápido
+
+Para validar la solución y los benchmarks presentados, ejecute los siguientes comandos en orden:
+
+```bash
+# 1. Configurar el entorno (Instala uv, crea venv, instala dependencias)
+make setup
+
+# 2. Ejecutar los tests (Verifica la lógica de las 6 funciones)
+make test
+
+# 3. Ejecutar Benchmarks (Genera el reporte de performance)
+python solution/benchmark.py
+```
+
+### 6.2. Matriz de Decisión: Time vs Memory
+
+Basado en los resultados obtenidos, esta es la recomendación de uso para cada paradigma implementado:
+
+| Criterio | Solución Recomendada | Justificación Técnica |
+| :--- | :--- | :--- |
+| **Baja Latencia (Real-time)** | `qX_time` (Polars) | Ideal para dashboards o APIs donde la velocidad es crítica. Aprovecha el paralelismo nativo de Rust. |
+| **Sistemas Legacy / Serverless** | `qX_memory` (Orjson) | Ideal para AWS Lambda o contenedores con poca RAM (512MB o menos). Mantiene un footprint constante. |
+| **Procesamiento de Emojis** | `q2_time` (Regex Robust) | El balance perfecto entre velocidad y soporte para grafemas complejos (ZWJ). |
+
+### 6.3. Reflexión Final
+
+Este reto demuestra que no existe una "bala de plata" en la ingeniería de datos.
+- Mientras que **Polars** redujo los tiempos de procesamiento a menos de **0.5 segundos** (una mejora de ~20x respecto a Python estándar), su uso de memoria es proporcional al volumen de datos en el plan de ejecución.
+- Por otro lado, la estrategia de **Streaming con Orjson** permitió procesar el mismo dataset con apenas **~200MB de RAM**, demostrando que la eficiencia de memoria es posible sin sacrificar excesivamente el tiempo (9s vs 0.5s).
+
+La implementación exitosa de los **Git Hooks**, la **Observabilidad (Wide Events)** y la **Calidad de Software (Pytest)** garantizan que el código no solo sea rápido, sino también mantenible y profesional.

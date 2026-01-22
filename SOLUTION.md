@@ -443,7 +443,7 @@ La cuenta de ejecución (**Runtime**) de la función solo requiere:
 
 ```bash
 # Definir variables
-export PROJECT_ID="latam-challenge-485101"
+export PROJECT_ID="<project-id"
 export SA_NAME="github-deployer"
 
 # 0. Habilitar APIs necesarias (Cloud Functions Gen 2)
@@ -467,6 +467,19 @@ done
 # 3. Generar Llave JSON (Copiar contenido en secreto GCP_SA_KEY de GitHub)
 gcloud iam service-accounts keys create github-key.json \
   --iam-account=$SA_NAME@$PROJECT_ID.iam.gserviceaccount.com
+
+# 4. Configurar Permisos de Infraestructura (Requerido para Cloud Functions Gen 2)
+export PROJECT_NUMBER=$(gcloud projects describe $PROJECT_ID --format='value(projectNumber)')
+
+# Permitir que GCS publique eventos (Eventarc)
+gcloud projects add-iam-policy-binding $PROJECT_ID \
+  --member="serviceAccount:service-$PROJECT_NUMBER@gs-project-accounts.iam.gserviceaccount.com" \
+  --role="roles/pubsub.publisher"
+
+# Activar Service Agent de Eventarc
+gcloud projects add-iam-policy-binding $PROJECT_ID \
+  --member="serviceAccount:service-$PROJECT_NUMBER@gcp-sa-eventarc.iam.gserviceaccount.com" \
+  --role="roles/eventarc.serviceAgent"
 ```
 
 Pasos:

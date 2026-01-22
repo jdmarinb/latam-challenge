@@ -314,7 +314,7 @@ El procesamiento de metadatos (`mentionedUsers`) es rápido, similar a Q1.
 
 **Conclusión**: **Polars** es la opción preferida para analítica rápida de metadatos estructurados. **ORJSON Streaming** sigue siendo el líder en eficiencia de memoria para procesar el dataset completo.
 
-**Nota:** Todos los benchmarks realizados se encuentran el el archivo [challenge.ipynb](solucion/challenge.ipynb), para su revisión y los benchmarks principales se programaron ene el archivo y los resultado en el archivo [benchmark_results.txt](solucion/benchmark_results.txt).
+**Nota:** Todos los benchmarks realizados se encuentran el el archivo [challenge.ipynb](src/challenge.ipynb), para su revisión y los benchmarks principales se programaron ene el archivo y los resultado en el archivo [benchmark_results.txt](solucion/benchmark_results.txt).
 
 ### 4.3. Resultados Finales de Benchmarking
 

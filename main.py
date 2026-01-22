@@ -68,7 +68,9 @@ def entrypoint(request):
                     result = q1_time(file_path)
 
                     # Persistir resultado
-                    output_name = name.replace("input/", "output/result_")
+                    output_name = name.replace("input/", "output/")
+                    if output_name == name:
+                        output_name = f"output/{name.split('/')[-1]}"
                     serializable = _serializable_result(result)
                     output_path = _write_to_gcs(
                         bucket, output_name, json.dumps(serializable)

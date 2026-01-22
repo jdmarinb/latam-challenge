@@ -41,8 +41,8 @@ jobs:
 
       - name: Package Function Code
         run: |
-          # Empaquetado selectivo: solo producción
-          zip -r source.zip main.py src/ requirements.txt
+          # Empaquetado selectivo: solo producción, excluyendo benchmarks y notebooks
+          zip -r source.zip main.py src/ requirements.txt -x "src/benchmark.py" "src/benchmark_results.txt" "src/challenge.ipynb"
           mv source.zip terraform/source.zip
 
       - name: Terraform Init

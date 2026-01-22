@@ -25,7 +25,7 @@ from src.q3_time import q3_time
 from src.q3_memory import q3_memory
 
 file_path = "farmers-protest-tweets-2021-2-4.json"
-output_file = "solution/benchmark_results.txt"
+output_file = "src/benchmark_results.txt"
 
 twitter_schema = {
     "date": pl.String,

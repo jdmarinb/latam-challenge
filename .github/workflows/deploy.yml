@@ -23,11 +23,13 @@ jobs:
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
 
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
       - name: Bootstrap Backend Bucket
         run: |
-          gsutil mb -l ${{ vars.GCP_REGION }} gs://${{ vars.GCP_PROJECT_ID }}-lake || echo "Bucket already exists"
-          sleep 10
-          gsutil ls gs://${{ vars.GCP_PROJECT_ID }}-lake
+          # Usar gcloud storage para mejor integración con la autenticación
+          gcloud storage buckets create gs://${{ vars.GCP_PROJECT_ID }}-lake --location=${{ vars.GCP_REGION }} --project=${{ vars.GCP_PROJECT_ID }} || gcloud storage buckets describe gs://${{ vars.GCP_PROJECT_ID }}-lake
 
       - name: Package Function Code
         run: |

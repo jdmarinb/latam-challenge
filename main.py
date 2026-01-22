@@ -8,15 +8,40 @@ from src.q3_memory import q3_memory
 import json
 import base64
 from google.cloud import storage
+import datetime
 
 
-def _write_to_gcs(bucket_name, blob_name, data):
+def _serializable_result(result):
+    """Convierte resultados de Polars a JSON serializable."""
+    if not isinstance(result, list):
+        return str(result)
+
+    clean_result = []
+    for item in result:
+        # Convertir tuplas a listas y fechas a string
+        clean_item = []
+        for val in item:
+            if isinstance(val, (datetime.date, datetime.datetime)):
+                clean_item.append(val.isoformat())
+            else:
+                clean_item.append(val)
+        clean_result.append(clean_item)
+    return clean_result
+
+
+def _write_to_gcs(bucket_name, blob_name, data_str):
     """Escribe datos en un bucket de GCS."""
-    client = storage.Client()
-    bucket = client.bucket(bucket_name)
-    blob = bucket.blob(blob_name)
-    blob.upload_from_string(data, content_type="application/json")
-    return f"gs://{bucket_name}/{blob_name}"
+    print(f"[GCS] Intentando subir a: gs://{bucket_name}/{blob_name}")
+    try:
+        client = storage.Client()
+        bucket = client.bucket(bucket_name)
+        blob = bucket.blob(blob_name)
+        blob.upload_from_string(data_str, content_type="application/json")
+        print(f"[GCS] Subida exitosa: gs://{bucket_name}/{blob_name}")
+        return f"gs://{bucket_name}/{blob_name}"
+    except Exception as e:
+        print(f"[GCS] ERROR en subida: {str(e)}")
+        raise e
 
 
 @functions_framework.http
@@ -26,6 +51,7 @@ def entrypoint(request):
 
     # Caso 1: Evento Pub/Sub (GCS Notification vía Eventarc)
     if request_json and "message" in request_json:
+        print("[TRIGGER] Detectado evento Pub/Sub")
         try:
             pubsub_message = request_json["message"]
             if "data" in pubsub_message:
@@ -36,13 +62,17 @@ def entrypoint(request):
                 name = data.get("name")
                 if bucket and name:
                     file_path = f"gs://{bucket}/{name}"
+                    print(f"[BATCH] Procesando archivo: {file_path}")
 
                     # Ejecutar procesamiento
                     result = q1_time(file_path)
 
-                    # Persistir resultado en la carpeta /output
+                    # Persistir resultado
                     output_name = name.replace("input/", "output/result_")
-                    output_path = _write_to_gcs(bucket, output_name, json.dumps(result))
+                    serializable = _serializable_result(result)
+                    output_path = _write_to_gcs(
+                        bucket, output_name, json.dumps(serializable)
+                    )
 
                     return json.dumps(
                         {
@@ -53,10 +83,12 @@ def entrypoint(request):
                         }
                     ), 200
 
+            print("[ERROR] Payload de Pub/Sub inválido")
             return json.dumps(
                 {"status": "error", "message": "Invalid Pub/Sub payload"}
             ), 400
         except Exception as e:
+            print(f"[ERROR FATAL] {str(e)}")
             return json.dumps({"status": "error", "message": str(e)}), 500
 
     # Caso 2: Request HTTP On-demand
@@ -89,8 +121,9 @@ def entrypoint(request):
                 "question": q,
                 "strategy": strategy,
                 "file": file_path,
-                "result": str(result),
+                "result": _serializable_result(result),
             }
         ), 200
     except Exception as e:
+        print(f"[HTTP ERROR] {str(e)}")
         return json.dumps({"status": "error", "message": str(e)}), 500

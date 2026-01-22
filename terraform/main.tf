@@ -17,6 +17,12 @@ variable "region" {
   default = "us-central1"
 }
 
+# Bloque de importación automática (Evita Error 409)
+import {
+  to = google_storage_bucket.data_lake
+  id = "${var.project_id}-lake"
+}
+
 # 1. Bucket de datos
 resource "google_storage_bucket" "data_lake" {
   name          = "${var.project_id}-lake"

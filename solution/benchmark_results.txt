@@ -1,0 +1,632 @@
+================================================================================
+=== FINAL BENCHMARK RESULTS (CANONICAL LOGS) ===
+================================================================================
+
+--- Running Q1 Time ---
+Performance Metrics:
+  > Execution Time: 0.4752 s
+  > Peak Memory: 516.50 MB
+Detailed Profile (cProfile):
+         2422 function calls (2319 primitive calls) in 2.703 seconds
+
+   Ordered by: cumulative time
+   List reduced from 417 to 15 due to restriction <15>
+
+   ncalls  tottime  percall  cumtime  percall filename:lineno(function)
+        1    0.000    0.000    2.703    2.703 C:\Users\johanmarin\Documents\challenge_DE\solution\benchmark.py:62(wrapper)
+        1    0.000    0.000    2.703    2.703 C:\Users\johanmarin\Documents\challenge_DE\solution\benchmark.py:46(measure_memory)
+        1    0.000    0.000    2.702    2.702 C:\Users\johanmarin\Documents\challenge_DE\.venv\Lib\site-packages\memory_profiler.py:269(memory_usage)
+        3    0.000    0.000    1.939    0.646 C:\Users\johanmarin\AppData\Roaming\uv\python\cpython-3.12.12-windows-x86_64-none\Lib\multiprocessing\connection.py:246(recv)
+        3    0.000    0.000    1.939    0.646 C:\Users\johanmarin\AppData\Roaming\uv\python\cpython-3.12.12-windows-x86_64-none\Lib\multiprocessing\connection.py:310(_recv_bytes)
+        2    1.939    0.969    1.939    0.969 {built-in method _winapi.WaitForMultipleObjects}
+        1    0.000    0.000    0.475    0.475 C:\Users\johanmarin\Documents\challenge_DE\solution\benchmark.py:65(time_wrapped_func)
+        1    0.000    0.000    0.475    0.475 C:\Users\johanmarin\Documents\challenge_DE\solution\benchmark.py:38(measure_time)
+        1    0.000    0.000    0.475    0.475 C:\Users\johanmarin\Documents\challenge_DE\src\common\logger.py:48(wrapper)
+        1    0.000    0.000    0.475    0.475 C:\Users\johanmarin\Documents\challenge_DE\src\q1_time.py:51(q1_time)
+        1    0.000    0.000    0.472    0.472 C:\Users\johanmarin\Documents\challenge_DE\.venv\Lib\site-packages\polars\_utils\deprecation.py:84(wrapper)
+        1    0.000    0.000    0.472    0.472 C:\Users\johanmarin\Documents\challenge_DE\.venv\Lib\site-packages\polars\lazyframe\opt_flags.py:308(wrapper)
+        1    0.000    0.000    0.472    0.472 C:\Users\johanmarin\Documents\challenge_DE\.venv\Lib\site-packages\polars\lazyframe\frame.py:2198(collect)
+        1    0.472    0.472    0.472    0.472 {method 'collect' of 'builtins.PyLazyFrame' objects}
+        1    0.000    0.000    0.273    0.273 C:\Users\johanmarin\AppData\Roaming\uv\python\cpython-3.12.12-windows-x86_64-none\Lib\multiprocessing\process.py:142(join)
+
+
+
+Canonical Log (Wide Event):
+
+--- INICIANDO PERFILADO DETALLADO: q1_time ---
+b'{"status":"success","total_duration_ms":474.77,"context":{"function":"q1_time","file_path":"farmers-protest-tweets-2021-2-4.json"},"metrics":{"output_rows":10},"steps":{"plan_top_dates":{"duration_ms":1.8973},"plan_user_counts":{"duration_ms":0.4392},"plan_final_query":{"duration_ms":0.2723},"execution_collect":{"duration_ms":471.7853}},"event":"q1_time_execution","level":"info","timestamp":"2026-01-22T00:09:45.957734Z"}'
+
+[PERF] q1_time:
+  > Tiempo: 0.4752 s
+  > Memoria: 516.50 MB
+         2422 function calls (2319 primitive calls) in 2.703 seconds
+
+   Ordered by: cumulative time
+   List reduced from 417 to 15 due to restriction <15>
+
+   ncalls  tottime  percall  cumtime  percall filename:lineno(function)
+        1    0.000    0.000    2.703    2.703 C:\Users\johanmarin\Documents\challenge_DE\solution\benchmark.py:62(wrapper)
+        1    0.000    0.000    2.703    2.703 C:\Users\johanmarin\Documents\challenge_DE\solution\benchmark.py:46(measure_memory)
+        1    0.000    0.000    2.702    2.702 C:\Users\johanmarin\Documents\challenge_DE\.venv\Lib\site-packages\memory_profiler.py:269(memory_usage)
+        3    0.000    0.000    1.939    0.646 C:\Users\johanmarin\AppData\Roaming\uv\python\cpython-3.12.12-windows-x86_64-none\Lib\multiprocessing\connection.py:246(recv)
+        3    0.000    0.000    1.939    0.646 C:\Users\johanmarin\AppData\Roaming\uv\python\cpython-3.12.12-windows-x86_64-none\Lib\multiprocessing\connection.py:310(_recv_bytes)
+        2    1.939    0.969    1.939    0.969 {built-in method _winapi.WaitForMultipleObjects}
+        1    0.000    0.000    0.475    0.475 C:\Users\johanmarin\Documents\challenge_DE\solution\benchmark.py:65(time_wrapped_func)
+        1    0.000    0.000    0.475    0.475 C:\Users\johanmarin\Documents\challenge_DE\solution\benchmark.py:38(measure_time)
+        1    0.000    0.000    0.475    0.475 C:\Users\johanmarin\Documents\challenge_DE\src\common\logger.py:48(wrapper)
+        1    0.000    0.000    0.475    0.475 C:\Users\johanmarin\Documents\challenge_DE\src\q1_time.py:51(q1_time)
+        1    0.000    0.000    0.472    0.472 C:\Users\johanmarin\Documents\challenge_DE\.venv\Lib\site-packages\polars\_utils\deprecation.py:84(wrapper)
+        1    0.000    0.000    0.472    0.472 C:\Users\johanmarin\Documents\challenge_DE\.venv\Lib\site-packages\polars\lazyframe\opt_flags.py:308(wrapper)
+        1    0.000    0.000    0.472    0.472 C:\Users\johanmarin\Documents\challenge_DE\.venv\Lib\site-packages\polars\lazyframe\frame.py:2198(collect)
+        1    0.472    0.472    0.472    0.472 {method 'collect' of 'builtins.PyLazyFrame' objects}
+        1    0.000    0.000    0.273    0.273 C:\Users\johanmarin\AppData\Roaming\uv\python\cpython-3.12.12-windows-x86_64-none\Lib\multiprocessing\process.py:142(join)
+
+
+
+--- FIN PERFILADO DETALLADO: q1_time ---
+
+Result (First 5 items):
+[(datetime.date(2021, 2, 12), 'RanbirS00614606'), (datetime.date(2021, 2, 13), 'MaanDee08215437'), (datetime.date(2021, 2, 17), 'RaaJVinderkaur'), (datetime.date(2021, 2, 16), 'jot__b'), (datetime.date(2021, 2, 14), 'rebelpacifist')]
+
+--- Running Q1 Memory ---
+Performance Metrics:
+  > Execution Time: 9.0248 s
+  > Peak Memory: 187.09 MB
+Detailed Profile (cProfile):
+         2773153 function calls (2773079 primitive calls) in 11.151 seconds
+
+   Ordered by: cumulative time
+   List reduced from 407 to 15 due to restriction <15>
+
+   ncalls  tottime  percall  cumtime  percall filename:lineno(function)
+        1    0.000    0.000   11.151   11.151 C:\Users\johanmarin\Documents\challenge_DE\solution\benchmark.py:62(wrapper)
+        1    0.000    0.000   11.151   11.151 C:\Users\johanmarin\Documents\challenge_DE\solution\benchmark.py:46(measure_memory)
+        1    0.000    0.000   11.150   11.150 C:\Users\johanmarin\Documents\challenge_DE\.venv\Lib\site-packages\memory_profiler.py:269(memory_usage)
+        1    0.000    0.000    9.025    9.025 C:\Users\johanmarin\Documents\challenge_DE\solution\benchmark.py:65(time_wrapped_func)
+        1    0.000    0.000    9.025    9.025 C:\Users\johanmarin\Documents\challenge_DE\solution\benchmark.py:38(measure_time)
+        1    0.004    0.004    9.025    9.025 C:\Users\johanmarin\Documents\challenge_DE\src\common\logger.py:48(wrapper)
+        1    0.000    0.000    9.021    9.021 C:\Users\johanmarin\Documents\challenge_DE\src\q1_memory.py:50(q1_memory)
+        3    0.920    0.307    9.012    3.004 {built-in method _functools.reduce}
+   234816    2.257    0.000    6.464    0.000 C:\Users\johanmarin\Documents\challenge_DE\src\common\utils.py:20(read_orjson)
+        1    0.000    0.000    4.636    4.636 C:\Users\johanmarin\Documents\challenge_DE\src\q1_memory.py:20(<lambda>)
+        1    0.000    0.000    4.271    4.271 C:\Users\johanmarin\Documents\challenge_DE\src\q1_memory.py:13(<lambda>)
+   234814    4.207    0.000    4.207    0.000 {orjson.loads}
+        3    0.000    0.000    1.954    0.651 C:\Users\johanmarin\AppData\Roaming\uv\python\cpython-3.12.12-windows-x86_64-none\Lib\multiprocessing\connection.py:246(recv)
+        3    0.000    0.000    1.954    0.651 C:\Users\johanmarin\AppData\Roaming\uv\python\cpython-3.12.12-windows-x86_64-none\Lib\multiprocessing\connection.py:310(_recv_bytes)
+        2    1.954    0.977    1.954    0.977 {built-in method _winapi.WaitForMultipleObjects}
+
+
+
+Canonical Log (Wide Event):
+
+--- INICIANDO PERFILADO DETALLADO: q1_memory ---
+b'{"status":"success","total_duration_ms":9024.59,"context":{"function":"q1_memory","file_path":"farmers-protest-tweets-2021-2-4.json"},"metrics":{"total_dates":13,"output_rows":10},"steps":{"identify_top_dates":{"duration_ms":4271.8131},"count_users_for_top_dates":{"duration_ms":4635.823},"rank_users":{"duration_ms":105.6071},"format_results":{"duration_ms":7.4899}},"event":"q1_memory_execution","level":"info","timestamp":"2026-01-22T00:09:57.239774Z"}'
+
+[PERF] q1_memory:
+  > Tiempo: 9.0248 s
+  > Memoria: 187.09 MB
+         2773153 function calls (2773079 primitive calls) in 11.151 seconds
+
+   Ordered by: cumulative time
+   List reduced from 407 to 15 due to restriction <15>
+
+   ncalls  tottime  percall  cumtime  percall filename:lineno(function)
+        1    0.000    0.000   11.151   11.151 C:\Users\johanmarin\Documents\challenge_DE\solution\benchmark.py:62(wrapper)
+        1    0.000    0.000   11.151   11.151 C:\Users\johanmarin\Documents\challenge_DE\solution\benchmark.py:46(measure_memory)
+        1    0.000    0.000   11.150   11.150 C:\Users\johanmarin\Documents\challenge_DE\.venv\Lib\site-packages\memory_profiler.py:269(memory_usage)
+        1    0.000    0.000    9.025    9.025 C:\Users\johanmarin\Documents\challenge_DE\solution\benchmark.py:65(time_wrapped_func)
+        1    0.000    0.000    9.025    9.025 C:\Users\johanmarin\Documents\challenge_DE\solution\benchmark.py:38(measure_time)
+        1    0.004    0.004    9.025    9.025 C:\Users\johanmarin\Documents\challenge_DE\src\common\logger.py:48(wrapper)
+        1    0.000    0.000    9.021    9.021 C:\Users\johanmarin\Documents\challenge_DE\src\q1_memory.py:50(q1_memory)
+        3    0.920    0.307    9.012    3.004 {built-in method _functools.reduce}
+   234816    2.257    0.000    6.464    0.000 C:\Users\johanmarin\Documents\challenge_DE\src\common\utils.py:20(read_orjson)
+        1    0.000    0.000    4.636    4.636 C:\Users\johanmarin\Documents\challenge_DE\src\q1_memory.py:20(<lambda>)
+        1    0.000    0.000    4.271    4.271 C:\Users\johanmarin\Documents\challenge_DE\src\q1_memory.py:13(<lambda>)
+   234814    4.207    0.000    4.207    0.000 {orjson.loads}
+        3    0.000    0.000    1.954    0.651 C:\Users\johanmarin\AppData\Roaming\uv\python\cpython-3.12.12-windows-x86_64-none\Lib\multiprocessing\connection.py:246(recv)
+        3    0.000    0.000    1.954    0.651 C:\Users\johanmarin\AppData\Roaming\uv\python\cpython-3.12.12-windows-x86_64-none\Lib\multiprocessing\connection.py:310(_recv_bytes)
+        2    1.954    0.977    1.954    0.977 {built-in method _winapi.WaitForMultipleObjects}
+
+
+
+--- FIN PERFILADO DETALLADO: q1_memory ---
+
+Result (First 5 items):
+[(datetime.date(2021, 2, 12), 'RanbirS00614606'), (datetime.date(2021, 2, 13), 'MaanDee08215437'), (datetime.date(2021, 2, 17), 'RaaJVinderkaur'), (datetime.date(2021, 2, 16), 'jot__b'), (datetime.date(2021, 2, 14), 'rebelpacifist')]
+
+--- Running Q2 Time ---
+Performance Metrics:
+  > Execution Time: 0.4323 s
+  > Peak Memory: 517.61 MB
+Detailed Profile (cProfile):
+         1284 function calls (1283 primitive calls) in 2.444 seconds
+
+   Ordered by: cumulative time
+   List reduced from 305 to 15 due to restriction <15>
+
+   ncalls  tottime  percall  cumtime  percall filename:lineno(function)
+        1    0.000    0.000    2.444    2.444 C:\Users\johanmarin\Documents\challenge_DE\solution\benchmark.py:62(wrapper)
+        1    0.000    0.000    2.444    2.444 C:\Users\johanmarin\Documents\challenge_DE\solution\benchmark.py:46(measure_memory)
+        1    0.000    0.000    2.443    2.443 C:\Users\johanmarin\Documents\challenge_DE\.venv\Lib\site-packages\memory_profiler.py:269(memory_usage)
+        3    0.000    0.000    1.873    0.624 C:\Users\johanmarin\AppData\Roaming\uv\python\cpython-3.12.12-windows-x86_64-none\Lib\multiprocessing\connection.py:246(recv)
+        3    0.000    0.000    1.873    0.624 C:\Users\johanmarin\AppData\Roaming\uv\python\cpython-3.12.12-windows-x86_64-none\Lib\multiprocessing\connection.py:310(_recv_bytes)
+        2    1.873    0.936    1.873    0.936 {built-in method _winapi.WaitForMultipleObjects}
+        1    0.000    0.000    0.432    0.432 C:\Users\johanmarin\Documents\challenge_DE\solution\benchmark.py:65(time_wrapped_func)
+        1    0.000    0.000    0.432    0.432 C:\Users\johanmarin\Documents\challenge_DE\solution\benchmark.py:38(measure_time)
+        1    0.000    0.000    0.432    0.432 C:\Users\johanmarin\Documents\challenge_DE\src\common\logger.py:48(wrapper)
+        1    0.000    0.000    0.432    0.432 C:\Users\johanmarin\Documents\challenge_DE\src\q2_time.py:19(q2_time)
+        1    0.000    0.000    0.431    0.431 C:\Users\johanmarin\Documents\challenge_DE\.venv\Lib\site-packages\polars\_utils\deprecation.py:84(wrapper)
+        1    0.000    0.000    0.431    0.431 C:\Users\johanmarin\Documents\challenge_DE\.venv\Lib\site-packages\polars\lazyframe\opt_flags.py:308(wrapper)
+        1    0.000    0.000    0.431    0.431 C:\Users\johanmarin\Documents\challenge_DE\.venv\Lib\site-packages\polars\lazyframe\frame.py:2198(collect)
+        1    0.430    0.430    0.430    0.430 {method 'collect' of 'builtins.PyLazyFrame' objects}
+        1    0.000    0.000    0.123    0.123 C:\Users\johanmarin\AppData\Roaming\uv\python\cpython-3.12.12-windows-x86_64-none\Lib\multiprocessing\process.py:142(join)
+
+
+
+Canonical Log (Wide Event):
+
+--- INICIANDO PERFILADO DETALLADO: q2_time ---
+b'{"status":"success","total_duration_ms":432.07,"context":{"function":"q2_time","file_path":"farmers-protest-tweets-2021-2-4.json"},"metrics":{"output_rows":10},"steps":{"build_query_plan":{"duration_ms":1.2558},"execution_collect":{"duration_ms":430.5808}},"event":"q2_time_execution","level":"info","timestamp":"2026-01-22T00:09:59.712818Z"}'
+
+[PERF] q2_time:
+  > Tiempo: 0.4323 s
+  > Memoria: 517.61 MB
+         1284 function calls (1283 primitive calls) in 2.444 seconds
+
+   Ordered by: cumulative time
+   List reduced from 305 to 15 due to restriction <15>
+
+   ncalls  tottime  percall  cumtime  percall filename:lineno(function)
+        1    0.000    0.000    2.444    2.444 C:\Users\johanmarin\Documents\challenge_DE\solution\benchmark.py:62(wrapper)
+        1    0.000    0.000    2.444    2.444 C:\Users\johanmarin\Documents\challenge_DE\solution\benchmark.py:46(measure_memory)
+        1    0.000    0.000    2.443    2.443 C:\Users\johanmarin\Documents\challenge_DE\.venv\Lib\site-packages\memory_profiler.py:269(memory_usage)
+        3    0.000    0.000    1.873    0.624 C:\Users\johanmarin\AppData\Roaming\uv\python\cpython-3.12.12-windows-x86_64-none\Lib\multiprocessing\connection.py:246(recv)
+        3    0.000    0.000    1.873    0.624 C:\Users\johanmarin\AppData\Roaming\uv\python\cpython-3.12.12-windows-x86_64-none\Lib\multiprocessing\connection.py:310(_recv_bytes)
+        2    1.873    0.936    1.873    0.936 {built-in method _winapi.WaitForMultipleObjects}
+        1    0.000    0.000    0.432    0.432 C:\Users\johanmarin\Documents\challenge_DE\solution\benchmark.py:65(time_wrapped_func)
+        1    0.000    0.000    0.432    0.432 C:\Users\johanmarin\Documents\challenge_DE\solution\benchmark.py:38(measure_time)
+        1    0.000    0.000    0.432    0.432 C:\Users\johanmarin\Documents\challenge_DE\src\common\logger.py:48(wrapper)
+        1    0.000    0.000    0.432    0.432 C:\Users\johanmarin\Documents\challenge_DE\src\q2_time.py:19(q2_time)
+        1    0.000    0.000    0.431    0.431 C:\Users\johanmarin\Documents\challenge_DE\.venv\Lib\site-packages\polars\_utils\deprecation.py:84(wrapper)
+        1    0.000    0.000    0.431    0.431 C:\Users\johanmarin\Documents\challenge_DE\.venv\Lib\site-packages\polars\lazyframe\opt_flags.py:308(wrapper)
+        1    0.000    0.000    0.431    0.431 C:\Users\johanmarin\Documents\challenge_DE\.venv\Lib\site-packages\polars\lazyframe\frame.py:2198(collect)
+        1    0.430    0.430    0.430    0.430 {method 'collect' of 'builtins.PyLazyFrame' objects}
+        1    0.000    0.000    0.123    0.123 C:\Users\johanmarin\AppData\Roaming\uv\python\cpython-3.12.12-windows-x86_64-none\Lib\multiprocessing\process.py:142(join)
+
+
+
+--- FIN PERFILADO DETALLADO: q2_time ---
+
+Result (First 5 items):
+[('🙏', 5049), ('😂', 3072), ('🚜', 2972), ('🌾', 2363), ('🇮🇳', 2086)]
+
+--- Running Q2 Memory ---
+Performance Metrics:
+  > Execution Time: 4.5875 s
+  > Peak Memory: 207.40 MB
+Detailed Profile (cProfile):
+         1294317 function calls (1294291 primitive calls) in 6.570 seconds
+
+   Ordered by: cumulative time
+   List reduced from 248 to 15 due to restriction <15>
+
+   ncalls  tottime  percall  cumtime  percall filename:lineno(function)
+        1    0.000    0.000    6.570    6.570 C:\Users\johanmarin\Documents\challenge_DE\solution\benchmark.py:62(wrapper)
+        1    0.000    0.000    6.570    6.570 C:\Users\johanmarin\Documents\challenge_DE\solution\benchmark.py:46(measure_memory)
+        1    0.000    0.000    6.569    6.569 C:\Users\johanmarin\Documents\challenge_DE\.venv\Lib\site-packages\memory_profiler.py:269(memory_usage)
+        1    0.000    0.000    4.588    4.588 C:\Users\johanmarin\Documents\challenge_DE\solution\benchmark.py:65(time_wrapped_func)
+        1    0.000    0.000    4.588    4.588 C:\Users\johanmarin\Documents\challenge_DE\solution\benchmark.py:38(measure_time)
+        1    0.000    0.000    4.588    4.588 C:\Users\johanmarin\Documents\challenge_DE\src\common\logger.py:48(wrapper)
+        1    0.000    0.000    4.587    4.587 C:\Users\johanmarin\Documents\challenge_DE\src\q2_memory.py:28(q2_memory)
+        1    0.000    0.000    4.584    4.584 C:\Users\johanmarin\Documents\challenge_DE\src\q2_memory.py:21(<lambda>)
+        1    0.359    0.359    4.584    4.584 {built-in method _functools.reduce}
+   117408    0.910    0.000    2.708    0.000 C:\Users\johanmarin\Documents\challenge_DE\src\common\utils.py:20(read_orjson)
+        3    0.000    0.000    1.843    0.614 C:\Users\johanmarin\AppData\Roaming\uv\python\cpython-3.12.12-windows-x86_64-none\Lib\multiprocessing\connection.py:246(recv)
+        3    0.000    0.000    1.843    0.614 C:\Users\johanmarin\AppData\Roaming\uv\python\cpython-3.12.12-windows-x86_64-none\Lib\multiprocessing\connection.py:310(_recv_bytes)
+        2    1.843    0.921    1.843    0.921 {built-in method _winapi.WaitForMultipleObjects}
+   117407    1.798    0.000    1.798    0.000 {orjson.loads}
+   117407    0.108    0.000    1.082    0.000 C:\Users\johanmarin\Documents\challenge_DE\src\q2_memory.py:16(<lambda>)
+
+
+
+Canonical Log (Wide Event):
+
+--- INICIANDO PERFILADO DETALLADO: q2_memory ---
+b'{"status":"success","total_duration_ms":4587.34,"context":{"function":"q2_memory","file_path":"farmers-protest-tweets-2021-2-4.json"},"metrics":{"unique_emojis":1188,"output_rows":10},"steps":{"create_extraction_stream":{"duration_ms":0.0531},"aggregate_counts":{"duration_ms":4584.4767},"get_top_10":{"duration_ms":1.5323}},"event":"q2_memory_execution","level":"info","timestamp":"2026-01-22T00:10:06.289753Z"}'
+
+[PERF] q2_memory:
+  > Tiempo: 4.5875 s
+  > Memoria: 207.40 MB
+         1294317 function calls (1294291 primitive calls) in 6.570 seconds
+
+   Ordered by: cumulative time
+   List reduced from 248 to 15 due to restriction <15>
+
+   ncalls  tottime  percall  cumtime  percall filename:lineno(function)
+        1    0.000    0.000    6.570    6.570 C:\Users\johanmarin\Documents\challenge_DE\solution\benchmark.py:62(wrapper)
+        1    0.000    0.000    6.570    6.570 C:\Users\johanmarin\Documents\challenge_DE\solution\benchmark.py:46(measure_memory)
+        1    0.000    0.000    6.569    6.569 C:\Users\johanmarin\Documents\challenge_DE\.venv\Lib\site-packages\memory_profiler.py:269(memory_usage)
+        1    0.000    0.000    4.588    4.588 C:\Users\johanmarin\Documents\challenge_DE\solution\benchmark.py:65(time_wrapped_func)
+        1    0.000    0.000    4.588    4.588 C:\Users\johanmarin\Documents\challenge_DE\solution\benchmark.py:38(measure_time)
+        1    0.000    0.000    4.588    4.588 C:\Users\johanmarin\Documents\challenge_DE\src\common\logger.py:48(wrapper)
+        1    0.000    0.000    4.587    4.587 C:\Users\johanmarin\Documents\challenge_DE\src\q2_memory.py:28(q2_memory)
+        1    0.000    0.000    4.584    4.584 C:\Users\johanmarin\Documents\challenge_DE\src\q2_memory.py:21(<lambda>)
+        1    0.359    0.359    4.584    4.584 {built-in method _functools.reduce}
+   117408    0.910    0.000    2.708    0.000 C:\Users\johanmarin\Documents\challenge_DE\src\common\utils.py:20(read_orjson)
+        3    0.000    0.000    1.843    0.614 C:\Users\johanmarin\AppData\Roaming\uv\python\cpython-3.12.12-windows-x86_64-none\Lib\multiprocessing\connection.py:246(recv)
+        3    0.000    0.000    1.843    0.614 C:\Users\johanmarin\AppData\Roaming\uv\python\cpython-3.12.12-windows-x86_64-none\Lib\multiprocessing\connection.py:310(_recv_bytes)
+        2    1.843    0.921    1.843    0.921 {built-in method _winapi.WaitForMultipleObjects}
+   117407    1.798    0.000    1.798    0.000 {orjson.loads}
+   117407    0.108    0.000    1.082    0.000 C:\Users\johanmarin\Documents\challenge_DE\src\q2_memory.py:16(<lambda>)
+
+
+
+--- FIN PERFILADO DETALLADO: q2_memory ---
+
+Result (First 5 items):
+[('🙏', 5804), ('😂', 3063), ('🚜', 2781), ('🇮🇳', 2086), ('🌾', 2029)]
+
+--- Running Q3 Time ---
+Performance Metrics:
+  > Execution Time: 0.4784 s
+  > Peak Memory: 634.33 MB
+Detailed Profile (cProfile):
+         1254 function calls (1253 primitive calls) in 2.285 seconds
+
+   Ordered by: cumulative time
+   List reduced from 293 to 15 due to restriction <15>
+
+   ncalls  tottime  percall  cumtime  percall filename:lineno(function)
+        1    0.000    0.000    2.285    2.285 C:\Users\johanmarin\Documents\challenge_DE\solution\benchmark.py:62(wrapper)
+        1    0.000    0.000    2.285    2.285 C:\Users\johanmarin\Documents\challenge_DE\solution\benchmark.py:46(measure_memory)
+        1    0.000    0.000    2.285    2.285 C:\Users\johanmarin\Documents\challenge_DE\.venv\Lib\site-packages\memory_profiler.py:269(memory_usage)
+        3    0.000    0.000    1.673    0.558 C:\Users\johanmarin\AppData\Roaming\uv\python\cpython-3.12.12-windows-x86_64-none\Lib\multiprocessing\connection.py:246(recv)
+        3    0.000    0.000    1.672    0.557 C:\Users\johanmarin\AppData\Roaming\uv\python\cpython-3.12.12-windows-x86_64-none\Lib\multiprocessing\connection.py:310(_recv_bytes)
+        2    1.672    0.836    1.672    0.836 {built-in method _winapi.WaitForMultipleObjects}
+        1    0.000    0.000    0.478    0.478 C:\Users\johanmarin\Documents\challenge_DE\solution\benchmark.py:65(time_wrapped_func)
+        1    0.000    0.000    0.478    0.478 C:\Users\johanmarin\Documents\challenge_DE\solution\benchmark.py:38(measure_time)
+        1    0.000    0.000    0.478    0.478 C:\Users\johanmarin\Documents\challenge_DE\src\common\logger.py:48(wrapper)
+        1    0.000    0.000    0.478    0.478 C:\Users\johanmarin\Documents\challenge_DE\src\q3_time.py:23(q3_time)
+        1    0.000    0.000    0.477    0.477 C:\Users\johanmarin\Documents\challenge_DE\.venv\Lib\site-packages\polars\_utils\deprecation.py:84(wrapper)
+        1    0.000    0.000    0.477    0.477 C:\Users\johanmarin\Documents\challenge_DE\.venv\Lib\site-packages\polars\lazyframe\opt_flags.py:308(wrapper)
+        1    0.000    0.000    0.477    0.477 C:\Users\johanmarin\Documents\challenge_DE\.venv\Lib\site-packages\polars\lazyframe\frame.py:2198(collect)
+        1    0.477    0.477    0.477    0.477 {method 'collect' of 'builtins.PyLazyFrame' objects}
+        1    0.000    0.000    0.122    0.122 C:\Users\johanmarin\AppData\Roaming\uv\python\cpython-3.12.12-windows-x86_64-none\Lib\multiprocessing\process.py:142(join)
+
+
+
+Canonical Log (Wide Event):
+
+--- INICIANDO PERFILADO DETALLADO: q3_time ---
+b'{"status":"success","total_duration_ms":478.24,"context":{"function":"q3_time","file_path":"farmers-protest-tweets-2021-2-4.json"},"metrics":{"output_rows":10},"steps":{"build_query_plan":{"duration_ms":0.8848},"execution_collect":{"duration_ms":477.1534}},"event":"q3_time_execution","level":"info","timestamp":"2026-01-22T00:10:08.586073Z"}'
+
+[PERF] q3_time:
+  > Tiempo: 0.4784 s
+  > Memoria: 634.33 MB
+         1254 function calls (1253 primitive calls) in 2.285 seconds
+
+   Ordered by: cumulative time
+   List reduced from 293 to 15 due to restriction <15>
+
+   ncalls  tottime  percall  cumtime  percall filename:lineno(function)
+        1    0.000    0.000    2.285    2.285 C:\Users\johanmarin\Documents\challenge_DE\solution\benchmark.py:62(wrapper)
+        1    0.000    0.000    2.285    2.285 C:\Users\johanmarin\Documents\challenge_DE\solution\benchmark.py:46(measure_memory)
+        1    0.000    0.000    2.285    2.285 C:\Users\johanmarin\Documents\challenge_DE\.venv\Lib\site-packages\memory_profiler.py:269(memory_usage)
+        3    0.000    0.000    1.673    0.558 C:\Users\johanmarin\AppData\Roaming\uv\python\cpython-3.12.12-windows-x86_64-none\Lib\multiprocessing\connection.py:246(recv)
+        3    0.000    0.000    1.672    0.557 C:\Users\johanmarin\AppData\Roaming\uv\python\cpython-3.12.12-windows-x86_64-none\Lib\multiprocessing\connection.py:310(_recv_bytes)
+        2    1.672    0.836    1.672    0.836 {built-in method _winapi.WaitForMultipleObjects}
+        1    0.000    0.000    0.478    0.478 C:\Users\johanmarin\Documents\challenge_DE\solution\benchmark.py:65(time_wrapped_func)
+        1    0.000    0.000    0.478    0.478 C:\Users\johanmarin\Documents\challenge_DE\solution\benchmark.py:38(measure_time)
+        1    0.000    0.000    0.478    0.478 C:\Users\johanmarin\Documents\challenge_DE\src\common\logger.py:48(wrapper)
+        1    0.000    0.000    0.478    0.478 C:\Users\johanmarin\Documents\challenge_DE\src\q3_time.py:23(q3_time)
+        1    0.000    0.000    0.477    0.477 C:\Users\johanmarin\Documents\challenge_DE\.venv\Lib\site-packages\polars\_utils\deprecation.py:84(wrapper)
+        1    0.000    0.000    0.477    0.477 C:\Users\johanmarin\Documents\challenge_DE\.venv\Lib\site-packages\polars\lazyframe\opt_flags.py:308(wrapper)
+        1    0.000    0.000    0.477    0.477 C:\Users\johanmarin\Documents\challenge_DE\.venv\Lib\site-packages\polars\lazyframe\frame.py:2198(collect)
+        1    0.477    0.477    0.477    0.477 {method 'collect' of 'builtins.PyLazyFrame' objects}
+        1    0.000    0.000    0.122    0.122 C:\Users\johanmarin\AppData\Roaming\uv\python\cpython-3.12.12-windows-x86_64-none\Lib\multiprocessing\process.py:142(join)
+
+
+
+--- FIN PERFILADO DETALLADO: q3_time ---
+
+Result (First 5 items):
+[('narendramodi', 2265), ('kisanektamorcha', 1840), ('rakeshtikaitbku', 1644), ('pmoindia', 1427), ('rahulgandhi', 1146)]
+
+--- Running Q3 Memory ---
+Performance Metrics:
+  > Execution Time: 3.8086 s
+  > Peak Memory: 310.55 MB
+Detailed Profile (cProfile):
+         1500402 function calls in 5.608 seconds
+
+   Ordered by: cumulative time
+   List reduced from 201 to 15 due to restriction <15>
+
+   ncalls  tottime  percall  cumtime  percall filename:lineno(function)
+        1    0.000    0.000    5.609    5.609 C:\Users\johanmarin\Documents\challenge_DE\solution\benchmark.py:62(wrapper)
+        1    0.000    0.000    5.609    5.609 C:\Users\johanmarin\Documents\challenge_DE\solution\benchmark.py:46(measure_memory)
+        1    0.000    0.000    5.608    5.608 C:\Users\johanmarin\Documents\challenge_DE\.venv\Lib\site-packages\memory_profiler.py:269(memory_usage)
+        1    0.000    0.000    3.809    3.809 C:\Users\johanmarin\Documents\challenge_DE\solution\benchmark.py:65(time_wrapped_func)
+        1    0.000    0.000    3.809    3.809 C:\Users\johanmarin\Documents\challenge_DE\solution\benchmark.py:38(measure_time)
+        1    0.000    0.000    3.809    3.809 C:\Users\johanmarin\Documents\challenge_DE\src\common\logger.py:48(wrapper)
+        1    0.000    0.000    3.808    3.808 C:\Users\johanmarin\Documents\challenge_DE\src\q3_memory.py:31(q3_memory)
+        1    0.000    0.000    3.759    3.759 C:\Users\johanmarin\Documents\challenge_DE\src\q3_memory.py:24(<lambda>)
+        1    0.343    0.343    3.758    3.758 {built-in method _functools.reduce}
+   117408    0.875    0.000    2.634    0.000 C:\Users\johanmarin\Documents\challenge_DE\src\common\utils.py:20(read_orjson)
+   117407    1.758    0.000    1.758    0.000 {orjson.loads}
+        3    0.000    0.000    1.660    0.553 C:\Users\johanmarin\AppData\Roaming\uv\python\cpython-3.12.12-windows-x86_64-none\Lib\multiprocessing\connection.py:246(recv)
+        3    0.000    0.000    1.660    0.553 C:\Users\johanmarin\AppData\Roaming\uv\python\cpython-3.12.12-windows-x86_64-none\Lib\multiprocessing\connection.py:310(_recv_bytes)
+        2    1.660    0.830    1.660    0.830 {built-in method _winapi.WaitForMultipleObjects}
+   117407    0.091    0.000    0.452    0.000 C:\Users\johanmarin\Documents\challenge_DE\src\q3_memory.py:25(<lambda>)
+
+
+
+Canonical Log (Wide Event):
+
+--- INICIANDO PERFILADO DETALLADO: q3_memory ---
+b'{"status":"success","total_duration_ms":3808.4,"context":{"function":"q3_memory","file_path":"farmers-protest-tweets-2021-2-4.json"},"metrics":{"unique_mentions":15235,"output_rows":10},"steps":{"create_extraction_stream":{"duration_ms":0.0102},"aggregate_counts":{"duration_ms":3758.5247},"get_top_10":{"duration_ms":49.5592}},"event":"q3_memory_execution","level":"info","timestamp":"2026-01-22T00:10:14.185785Z"}'
+
+[PERF] q3_memory:
+  > Tiempo: 3.8086 s
+  > Memoria: 310.55 MB
+         1500402 function calls in 5.608 seconds
+
+   Ordered by: cumulative time
+   List reduced from 201 to 15 due to restriction <15>
+
+   ncalls  tottime  percall  cumtime  percall filename:lineno(function)
+        1    0.000    0.000    5.609    5.609 C:\Users\johanmarin\Documents\challenge_DE\solution\benchmark.py:62(wrapper)
+        1    0.000    0.000    5.609    5.609 C:\Users\johanmarin\Documents\challenge_DE\solution\benchmark.py:46(measure_memory)
+        1    0.000    0.000    5.608    5.608 C:\Users\johanmarin\Documents\challenge_DE\.venv\Lib\site-packages\memory_profiler.py:269(memory_usage)
+        1    0.000    0.000    3.809    3.809 C:\Users\johanmarin\Documents\challenge_DE\solution\benchmark.py:65(time_wrapped_func)
+        1    0.000    0.000    3.809    3.809 C:\Users\johanmarin\Documents\challenge_DE\solution\benchmark.py:38(measure_time)
+        1    0.000    0.000    3.809    3.809 C:\Users\johanmarin\Documents\challenge_DE\src\common\logger.py:48(wrapper)
+        1    0.000    0.000    3.808    3.808 C:\Users\johanmarin\Documents\challenge_DE\src\q3_memory.py:31(q3_memory)
+        1    0.000    0.000    3.759    3.759 C:\Users\johanmarin\Documents\challenge_DE\src\q3_memory.py:24(<lambda>)
+        1    0.343    0.343    3.758    3.758 {built-in method _functools.reduce}
+   117408    0.875    0.000    2.634    0.000 C:\Users\johanmarin\Documents\challenge_DE\src\common\utils.py:20(read_orjson)
+   117407    1.758    0.000    1.758    0.000 {orjson.loads}
+        3    0.000    0.000    1.660    0.553 C:\Users\johanmarin\AppData\Roaming\uv\python\cpython-3.12.12-windows-x86_64-none\Lib\multiprocessing\connection.py:246(recv)
+        3    0.000    0.000    1.660    0.553 C:\Users\johanmarin\AppData\Roaming\uv\python\cpython-3.12.12-windows-x86_64-none\Lib\multiprocessing\connection.py:310(_recv_bytes)
+        2    1.660    0.830    1.660    0.830 {built-in method _winapi.WaitForMultipleObjects}
+   117407    0.091    0.000    0.452    0.000 C:\Users\johanmarin\Documents\challenge_DE\src\q3_memory.py:25(<lambda>)
+
+
+
+--- FIN PERFILADO DETALLADO: q3_memory ---
+
+Result (First 5 items):
+[('narendramodi', 2265), ('kisanektamorcha', 1840), ('rakeshtikaitbku', 1644), ('pmoindia', 1427), ('rahulgandhi', 1146)]
+
+--- Q1 ORJSON STREAMING ---
+  > Time: 2.8478 s
+  > Memory: 312.26 MB
+  > Log: [LAB] Escenario: ORJSON STREAMING
+
+[PERF] lab_modular_test:
+  > Tiempo: 2.8478 s
+  > Memoria: 312.26 MB
+--- Q1 ORJSON + MULTITHREADING ---
+  > Time: 3.5410 s
+  > Memory: 362.51 MB
+  > Log: [LAB] Escenario: ORJSON + MULTITHREADING (THREAD)
+
+[PERF] lab_parallel_test:
+  > Tiempo: 3.5410 s
+  > Memoria: 362.51 MB
+--- Q1 ORJSON + MULTIPROCESSING ---
+  > Time: 6.2983 s
+  > Memory: 744.87 MB
+  > Log: [LAB] Escenario: ORJSON + MULTIPROCESSING (PROCESS)
+
+[PERF] lab_parallel_test:
+  > Tiempo: 6.2983 s
+  > Memoria: 744.87 MB
+--- Q1 POLARS LAZY ---
+  > Time: 0.4044 s
+  > Memory: 587.34 MB
+  > Log: [LAB] Escenario: POLARS LAZY
+
+[PERF] lab_modular_test:
+  > Tiempo: 0.4044 s
+  > Memoria: 587.34 MB
+--- Q1 POLARS STREAMING ---
+  > Time: 0.4087 s
+  > Memory: 583.31 MB
+  > Log: [LAB] Escenario: POLARS STREAMING
+
+[PERF] lab_modular_test:
+  > Tiempo: 0.4087 s
+  > Memoria: 583.31 MB
+--- Q1 POLARS EAGER ---
+  > Time: 0.4518 s
+  > Memory: 663.18 MB
+  > Log: [LAB] Escenario: POLARS EAGER
+
+[PERF] lab_modular_test:
+  > Tiempo: 0.4518 s
+  > Memoria: 663.18 MB
+--- Q2 ORJSON STREAMING ---
+  > Time: 29.6507 s
+  > Memory: 355.47 MB
+  > Log: [LAB] Escenario: ORJSON STREAMING
+
+[PERF] lab_modular_test:
+  > Tiempo: 29.6507 s
+  > Memoria: 355.47 MB
+--- Q2 ORJSON + MULTITHREADING ---
+  > Time: 29.0316 s
+  > Memory: 401.14 MB
+  > Log: [LAB] Escenario: ORJSON + MULTITHREADING (THREAD)
+
+[PERF] lab_parallel_test:
+  > Tiempo: 29.0316 s
+  > Memoria: 401.14 MB
+--- Q2 ORJSON + MULTIPROCESSING ---
+  > Time: 9.3764 s
+  > Memory: 782.32 MB
+  > Log: [LAB] Escenario: ORJSON + MULTIPROCESSING (PROCESS)
+
+[PERF] lab_parallel_test:
+  > Tiempo: 9.3764 s
+  > Memoria: 782.32 MB
+--- Q2 POLARS LAZY ---
+  > Time: 25.0930 s
+  > Memory: 535.31 MB
+  > Log: [LAB] Escenario: POLARS LAZY
+
+[PERF] lab_modular_test:
+  > Tiempo: 25.0930 s
+  > Memoria: 535.31 MB
+--- Q2 POLARS STREAMING ---
+  > Time: 24.9099 s
+  > Memory: 623.39 MB
+  > Log: [LAB] Escenario: POLARS STREAMING
+
+[PERF] lab_modular_test:
+  > Tiempo: 24.9099 s
+  > Memoria: 623.39 MB
+--- Q2 POLARS EAGER ---
+  > Time: 24.8029 s
+  > Memory: 741.35 MB
+  > Log: [LAB] Escenario: POLARS EAGER
+
+[PERF] lab_modular_test:
+  > Tiempo: 24.8029 s
+  > Memoria: 741.35 MB
+--- Q2 ORJSON STREAMING (REGEX) ---
+  > Time: 3.2151 s
+  > Memory: 354.46 MB
+  > Log: [LAB] Escenario: ORJSON STREAMING (REGEX)
+
+[PERF] lab_modular_test:
+  > Tiempo: 3.2151 s
+  > Memoria: 354.46 MB
+--- Q2 ORJSON + MULTITHREADING (REGEX) ---
+  > Time: 3.5778 s
+  > Memory: 396.00 MB
+  > Log: [LAB] Escenario: ORJSON + MULTITHREADING (REGEX) (THREAD)
+
+[PERF] lab_parallel_test:
+  > Tiempo: 3.5778 s
+  > Memoria: 396.00 MB
+--- Q2 ORJSON + MULTIPROCESSING (REGEX) ---
+  > Time: 5.0591 s
+  > Memory: 787.58 MB
+  > Log: [LAB] Escenario: ORJSON + MULTIPROCESSING (REGEX) (PROCESS)
+
+[PERF] lab_parallel_test:
+  > Tiempo: 5.0591 s
+  > Memoria: 787.58 MB
+--- Q2 POLARS LAZY (REGEX) ---
+  > Time: 0.4286 s
+  > Memory: 619.64 MB
+  > Log: [LAB] Escenario: POLARS LAZY (REGEX)
+
+[PERF] lab_modular_test:
+  > Tiempo: 0.4286 s
+  > Memoria: 619.64 MB
+--- Q2 POLARS STREAMING (REGEX) ---
+  > Time: 0.3703 s
+  > Memory: 629.57 MB
+  > Log: [LAB] Escenario: POLARS STREAMING (REGEX)
+
+[PERF] lab_modular_test:
+  > Tiempo: 0.3703 s
+  > Memoria: 629.57 MB
+--- Q2 POLARS EAGER (REGEX) ---
+  > Time: 0.4573 s
+  > Memory: 684.85 MB
+  > Log: [LAB] Escenario: POLARS EAGER (REGEX)
+
+[PERF] lab_modular_test:
+  > Tiempo: 0.4573 s
+  > Memoria: 684.85 MB
+--- Q2 ORJSON STREAMING (ROBUST REGEX) ---
+  > Time: 3.9260 s
+  > Memory: 365.09 MB
+  > Log: [LAB] Escenario: ORJSON STREAMING (ROBUST REGEX)
+
+[PERF] lab_modular_test:
+  > Tiempo: 3.9260 s
+  > Memoria: 365.09 MB
+--- Q2 ORJSON + MULTITHREADING (ROBUST REGEX) ---
+  > Time: 4.0215 s
+  > Memory: 413.76 MB
+  > Log: [LAB] Escenario: ORJSON + MULTITHREADING (ROBUST REGEX) (THREAD)
+
+[PERF] lab_parallel_test:
+  > Tiempo: 4.0215 s
+  > Memoria: 413.76 MB
+--- Q2 ORJSON + MULTIPROCESSING (ROBUST REGEX) ---
+  > Time: 5.0430 s
+  > Memory: 798.05 MB
+  > Log: [LAB] Escenario: ORJSON + MULTIPROCESSING (ROBUST REGEX) (PROCESS)
+
+[PERF] lab_parallel_test:
+  > Tiempo: 5.0430 s
+  > Memoria: 798.05 MB
+--- Q2 POLARS LAZY (ROBUST REGEX) ---
+  > Time: 0.4106 s
+  > Memory: 606.80 MB
+  > Log: [LAB] Escenario: POLARS LAZY (ROBUST REGEX)
+
+[PERF] lab_modular_test:
+  > Tiempo: 0.4106 s
+  > Memoria: 606.80 MB
+--- Q2 POLARS STREAMING (ROBUST REGEX) ---
+  > Time: 0.3058 s
+  > Memory: 644.21 MB
+  > Log: [LAB] Escenario: POLARS STREAMING (ROBUST REGEX)
+
+[PERF] lab_modular_test:
+  > Tiempo: 0.3058 s
+  > Memoria: 644.21 MB
+--- Q3 ORJSON STREAMING ---
+  > Time: 2.9596 s
+  > Memory: 268.28 MB
+  > Log: [LAB] Escenario: ORJSON STREAMING
+
+[PERF] lab_modular_test:
+  > Tiempo: 2.9596 s
+  > Memoria: 268.28 MB
+--- Q3 ORJSON + MULTITHREADING ---
+  > Time: 3.0196 s
+  > Memory: 318.73 MB
+  > Log: [LAB] Escenario: ORJSON + MULTITHREADING (THREAD)
+
+[PERF] lab_parallel_test:
+  > Tiempo: 3.0196 s
+  > Memoria: 318.73 MB
+--- Q3 ORJSON + MULTIPROCESSING ---
+  > Time: 5.0172 s
+  > Memory: 700.28 MB
+  > Log: [LAB] Escenario: ORJSON + MULTIPROCESSING (PROCESS)
+
+[PERF] lab_parallel_test:
+  > Tiempo: 5.0172 s
+  > Memoria: 700.28 MB
+--- Q3 POLARS LAZY ---
+  > Time: 0.4290 s
+  > Memory: 664.44 MB
+  > Log: [LAB] Escenario: POLARS LAZY
+
+[PERF] lab_modular_test:
+  > Tiempo: 0.4290 s
+  > Memoria: 664.44 MB
+--- Q3 POLARS STREAMING ---
+  > Time: 0.4660 s
+  > Memory: 644.53 MB
+  > Log: [LAB] Escenario: POLARS STREAMING
+
+[PERF] lab_modular_test:
+  > Tiempo: 0.4660 s
+  > Memoria: 644.53 MB
+--- Q3 POLARS EAGER ---
+  > Time: 0.5148 s
+  > Memory: 744.79 MB
+  > Log: [LAB] Escenario: POLARS EAGER
+
+[PERF] lab_modular_test:
+  > Tiempo: 0.5148 s
+  > Memoria: 744.79 MB

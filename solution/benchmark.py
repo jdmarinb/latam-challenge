@@ -1,25 +1,106 @@
 import os
+import re
+import io
 import sys
+import time
+import emoji
+import pstats
+import orjson
+import cProfile
+import functools
+import unicodedata
+import polars as pl
+from collections import Counter
+from typing import Callable, Any
+from collections.abc import Iterable
+from memory_profiler import memory_usage
+from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor
 
-# Local libraries - ensure project root is in sys.path before local imports
-project_root = os.path.abspath(os.path.join(os.getcwd(), ".."))
-if project_root not in sys.path:
-    sys.path.append(project_root)
-
-import re  # noqa: E402
-import emoji  # noqa: E402
-import orjson  # noqa: E402
-import unicodedata  # noqa: E402
-import polars as pl  # noqa: E402
-from collections import Counter  # noqa: E402
-from typing import Callable  # noqa: E402
-from collections.abc import Iterable  # noqa: E402
-from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor  # noqa: E402
-
-from src.common.utils import twitter_schema  # noqa: E402
-from src.common.performance import profile_performance  # noqa: E402
+# Import all functions
+from src.q1_time import q1_time
+from src.q1_memory import q1_memory
+from src.q2_time import q2_time
+from src.q2_memory import q2_memory
+from src.q3_time import q3_time
+from src.q3_memory import q3_memory
 
 file_path = "farmers-protest-tweets-2021-2-4.json"
+output_file = "solution/benchmark_results.txt"
+
+twitter_schema = {
+    "date": pl.String,
+    "content": pl.String,
+    "user": pl.Struct([pl.Field("id", pl.Int64), pl.Field("username", pl.String)]),
+    "mentionedUsers": pl.List(pl.Struct([pl.Field("username", pl.String)])),
+}
+
+
+def measure_time(func: Callable, *args, **kwargs) -> tuple[float, Any]:
+    """Responsabilidad: Medir el tiempo de ejecución y retornar resultado."""
+    start_time = time.perf_counter()
+    result = func(*args, **kwargs)
+    end_time = time.perf_counter()
+    return end_time - start_time, result
+
+
+def measure_memory(func: Callable, *args, **kwargs) -> tuple[float, Any]:
+    """Responsabilidad: Medir el pico de memoria y retornar resultado."""
+    # Nota: memory_usage ejecuta la función internamente.
+    # Para medir tiempo Y memoria en una sola ejecución reutilizando lógica,
+    # el decorador debe orquestar.
+    mem_samples, result = memory_usage((func, args, kwargs), interval=0.1, retval=True)
+    return max(mem_samples), result
+
+
+def profile_performance(func):
+    """
+    Decorador que orquesta la medición de rendimiento.
+    Para no ejecutar la función dos veces, usamos measure_memory
+    pasándole una versión de la función que ya mide su tiempo.
+    """
+
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):
+        # Creamos una función interna que usa measure_time para ser monitoreada por measure_memory
+        def time_wrapped_func():
+            return measure_time(func, *args, **kwargs)
+
+        # Ejecutamos la medición de memoria sobre la función que mide tiempo
+        peak_mem, (duration, result) = measure_memory(time_wrapped_func)
+
+        print(f"\n[PERF] {func.__name__}:")
+        print(f"  > Tiempo: {duration:.4f} s")
+        print(f"  > Memoria: {peak_mem:.2f} MB")
+
+        return peak_mem, duration, result
+
+    return wrapper
+
+
+def profile_detailed(func):
+    """
+    Decorador independiente para análisis detallado con cProfile.
+    Útil para detectar cuellos de botella, pero añade overhead al tiempo medido.
+    """
+
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):
+        print(f"\n--- INICIANDO PERFILADO DETALLADO: {func.__name__} ---")
+        profiler = cProfile.Profile()
+        profiler.enable()
+        result = func(*args, **kwargs)
+        profiler.disable()
+
+        s = io.StringIO()
+        ps = pstats.Stats(profiler, stream=s).sort_stats("cumulative")
+        ps.print_stats(15)  # Top 15 funciones
+        detailed_stats = s.getvalue()
+        print(detailed_stats)
+        print(f"--- FIN PERFILADO DETALLADO: {func.__name__} ---\n")
+
+        return result, detailed_stats
+
+    return wrapper
 
 
 def read_streaming_orjson(file_path: str) -> Iterable[dict]:
@@ -238,29 +319,60 @@ def process_q3_parallel_worker(chunk: list[bytes]) -> Counter:
 # --- 4. ORQUESTADORES DE LABORATORIO ---
 
 
-def run_lab():
+def run_lab(f_handle=None):
     print(
         "\n-------------------------------------------------------------------------\n"
     )
     print("Comparando todas las Combinaciones pregunta 1")
 
-    lab_modular_test(
-        "ORJSON STREAMING", read_streaming_orjson, process_q1_functional, file_path
+    def log_to_file(msg):
+        if f_handle:
+            f_handle.write(msg + "\n")
+        print(msg)
+
+    def run_lab_test(name, test_func, *args):
+        log_buffer = io.StringIO()
+        original_stdout = sys.stdout
+        sys.stdout = log_buffer
+        try:
+            peak_mem, duration, result = test_func(*args)
+            sys.stdout = original_stdout
+            log_to_file(f"--- {name} ---")
+            log_to_file(f"  > Time: {duration:.4f} s")
+            log_to_file(f"  > Memory: {peak_mem:.2f} MB")
+            log_to_file(f"  > Log: {log_buffer.getvalue().strip()}")
+        except Exception as e:
+            sys.stdout = original_stdout
+            log_to_file(f"Error in {name}: {str(e)}")
+
+    run_lab_test(
+        "Q1 ORJSON STREAMING",
+        lab_modular_test,
+        "ORJSON STREAMING",
+        read_streaming_orjson,
+        process_q1_functional,
+        file_path,
     )
-    lab_parallel_test(
+    run_lab_test(
+        "Q1 ORJSON + MULTITHREADING",
+        lab_parallel_test,
         "ORJSON + MULTITHREADING",
         file_path,
-        mode="thread",
-        worker=process_q1_parallel_worker,
+        "thread",
+        process_q1_parallel_worker,
     )
-    lab_parallel_test(
+    run_lab_test(
+        "Q1 ORJSON + MULTIPROCESSING",
+        lab_parallel_test,
         "ORJSON + MULTIPROCESSING",
         file_path,
-        mode="process",
-        worker=process_q1_parallel_worker,
+        "process",
+        process_q1_parallel_worker,
     )
 
-    lab_modular_test(
+    run_lab_test(
+        "Q1 POLARS LAZY",
+        lab_modular_test,
         "POLARS LAZY",
         lambda f: pl.scan_ndjson(f, schema=twitter_schema, ignore_errors=True),
         lambda lf: lf.select(
@@ -272,8 +384,9 @@ def run_lab():
         .collect(),
         file_path,
     )
-
-    lab_modular_test(
+    run_lab_test(
+        "Q1 POLARS STREAMING",
+        lab_modular_test,
         "POLARS STREAMING",
         lambda f: pl.scan_ndjson(f, schema=twitter_schema, ignore_errors=True),
         lambda lf: (
@@ -290,8 +403,9 @@ def run_lab():
         ),
         file_path,
     )
-
-    lab_modular_test(
+    run_lab_test(
+        "Q1 POLARS EAGER",
+        lab_modular_test,
         "POLARS EAGER",
         lambda f: pl.read_ndjson(f, schema=twitter_schema, ignore_errors=True),
         lambda df: df.select(
@@ -302,34 +416,42 @@ def run_lab():
         .len(),
         file_path,
     )
+
     print(
         "\n-------------------------------------------------------------------------\n"
     )
     print("Comparando todas las Combinaciones pregunta 2 usando emoji")
-
-    lab_modular_test(
-        "ORJSON STREAMING", read_streaming_orjson, process_q2_functional, file_path
+    run_lab_test(
+        "Q2 ORJSON STREAMING",
+        lab_modular_test,
+        "ORJSON STREAMING",
+        read_streaming_orjson,
+        process_q2_functional,
+        file_path,
     )
-    lab_parallel_test(
+    run_lab_test(
+        "Q2 ORJSON + MULTITHREADING",
+        lab_parallel_test,
         "ORJSON + MULTITHREADING",
         file_path,
-        mode="thread",
-        worker=process_q2_parallel_worker,
+        "thread",
+        process_q2_parallel_worker,
     )
-    lab_parallel_test(
+    run_lab_test(
+        "Q2 ORJSON + MULTIPROCESSING",
+        lab_parallel_test,
         "ORJSON + MULTIPROCESSING",
         file_path,
-        mode="process",
-        worker=process_q2_parallel_worker,
+        "process",
+        process_q2_parallel_worker,
     )
 
-    # Polars Q2: Extracción de emojis usando map_elements con la librería emoji (Sin Regex)
     def extract_emojis_map(content):
-        if content:
-            return [e.chars for e in emoji.analyze(content)]
-        return []
+        return [e.chars for e in emoji.analyze(content)] if content else []
 
-    lab_modular_test(
+    run_lab_test(
+        "Q2 POLARS LAZY",
+        lab_modular_test,
         "POLARS LAZY",
         lambda f: pl.scan_ndjson(f, schema=twitter_schema, ignore_errors=True),
         lambda lf: lf.select(
@@ -344,8 +466,9 @@ def run_lab():
         .collect(),
         file_path,
     )
-
-    lab_modular_test(
+    run_lab_test(
+        "Q2 POLARS STREAMING",
+        lab_modular_test,
         "POLARS STREAMING",
         lambda f: pl.scan_ndjson(f, schema=twitter_schema, ignore_errors=True),
         lambda lf: lf.select(
@@ -360,8 +483,9 @@ def run_lab():
         .collect(engine="streaming"),
         file_path,
     )
-
-    lab_modular_test(
+    run_lab_test(
+        "Q2 POLARS EAGER",
+        lab_modular_test,
         "POLARS EAGER",
         lambda f: pl.read_ndjson(f, schema=twitter_schema, ignore_errors=True),
         lambda df: df.select(
@@ -380,32 +504,36 @@ def run_lab():
         "\n-------------------------------------------------------------------------\n"
     )
     print("Comparando todas las Combinaciones pregunta 2 usando regex")
-
-    # Regex compatible con Rust/Polars (Soporta escalares directos)
     polars_emoji_regex = (
         r"[\u2600-\u27BF]|[\U0001F300-\U0001F6FF]|[\U0001F900-\U0001F9FF]"
     )
-
-    lab_modular_test(
+    run_lab_test(
+        "Q2 ORJSON STREAMING (REGEX)",
+        lab_modular_test,
         "ORJSON STREAMING (REGEX)",
         read_streaming_orjson,
         process_q2_regex_functional,
         file_path,
     )
-    lab_parallel_test(
+    run_lab_test(
+        "Q2 ORJSON + MULTITHREADING (REGEX)",
+        lab_parallel_test,
         "ORJSON + MULTITHREADING (REGEX)",
         file_path,
-        mode="thread",
-        worker=process_q2_regex_parallel_worker,
+        "thread",
+        process_q2_regex_parallel_worker,
     )
-    lab_parallel_test(
+    run_lab_test(
+        "Q2 ORJSON + MULTIPROCESSING (REGEX)",
+        lab_parallel_test,
         "ORJSON + MULTIPROCESSING (REGEX)",
         file_path,
-        mode="process",
-        worker=process_q2_regex_parallel_worker,
+        "process",
+        process_q2_regex_parallel_worker,
     )
-
-    lab_modular_test(
+    run_lab_test(
+        "Q2 POLARS LAZY (REGEX)",
+        lab_modular_test,
         "POLARS LAZY (REGEX)",
         lambda f: pl.scan_ndjson(f, schema=twitter_schema, ignore_errors=True),
         lambda lf: lf.select(
@@ -418,8 +546,9 @@ def run_lab():
         .collect(),
         file_path,
     )
-
-    lab_modular_test(
+    run_lab_test(
+        "Q2 POLARS STREAMING (REGEX)",
+        lab_modular_test,
         "POLARS STREAMING (REGEX)",
         lambda f: pl.scan_ndjson(f, schema=twitter_schema, ignore_errors=True),
         lambda lf: lf.select(
@@ -432,8 +561,9 @@ def run_lab():
         .collect(engine="streaming"),
         file_path,
     )
-
-    lab_modular_test(
+    run_lab_test(
+        "Q2 POLARS EAGER (REGEX)",
+        lab_modular_test,
         "POLARS EAGER (REGEX)",
         lambda f: pl.read_ndjson(f, schema=twitter_schema, ignore_errors=True),
         lambda df: df.select(
@@ -452,37 +582,34 @@ def run_lab():
     print(
         "Comparando todas las Combinaciones pregunta 2 usando robust regex (ZWJ Support)"
     )
-
-    lab_modular_test(
+    robust_emoji_rust = r"((?:[\U0001F3FB-\U0001F3FF])|(?:[\u2600-\u27BF])|(?:[\U0001F300-\U0001FAFF])|(?:[\u200D]))+"
+    run_lab_test(
+        "Q2 ORJSON STREAMING (ROBUST REGEX)",
+        lab_modular_test,
         "ORJSON STREAMING (ROBUST REGEX)",
         read_streaming_orjson,
         process_q2_robust_regex_functional,
         file_path,
     )
-    lab_parallel_test(
+    run_lab_test(
+        "Q2 ORJSON + MULTITHREADING (ROBUST REGEX)",
+        lab_parallel_test,
         "ORJSON + MULTITHREADING (ROBUST REGEX)",
         file_path,
-        mode="thread",
-        worker=process_q2_robust_regex_parallel_worker,
+        "thread",
+        process_q2_robust_regex_parallel_worker,
     )
-    lab_parallel_test(
+    run_lab_test(
+        "Q2 ORJSON + MULTIPROCESSING (ROBUST REGEX)",
+        lab_parallel_test,
         "ORJSON + MULTIPROCESSING (ROBUST REGEX)",
         file_path,
-        mode="process",
-        worker=process_q2_robust_regex_parallel_worker,
+        "process",
+        process_q2_robust_regex_parallel_worker,
     )
-
-    # Regex Robusta compatible con Rust/Polars
-    robust_emoji_rust = (
-        r"("
-        r"(?:[\U0001F3FB-\U0001F3FF])|"  # Skin tones
-        r"(?:[\u2600-\u27BF])|"  # Basic blocks
-        r"(?:[\U0001F300-\U0001FAFF])|"  # Extended blocks
-        r"(?:[\u200D])"  # Zero Width Joiner
-        r")+"
-    )
-
-    lab_modular_test(
+    run_lab_test(
+        "Q2 POLARS LAZY (ROBUST REGEX)",
+        lab_modular_test,
         "POLARS LAZY (ROBUST REGEX)",
         lambda f: pl.scan_ndjson(f, schema=twitter_schema, ignore_errors=True),
         lambda lf: lf.select(
@@ -495,8 +622,9 @@ def run_lab():
         .collect(),
         file_path,
     )
-
-    lab_modular_test(
+    run_lab_test(
+        "Q2 POLARS STREAMING (ROBUST REGEX)",
+        lab_modular_test,
         "POLARS STREAMING (ROBUST REGEX)",
         lambda f: pl.scan_ndjson(f, schema=twitter_schema, ignore_errors=True),
         lambda lf: lf.select(
@@ -514,32 +642,35 @@ def run_lab():
         "\n-------------------------------------------------------------------------\n"
     )
     print("Comparando todas las Combinaciones pregunta 3")
-
-    lab_modular_test(
-        "ORJSON STREAMING", read_streaming_orjson, process_q3_functional, file_path
+    run_lab_test(
+        "Q3 ORJSON STREAMING",
+        lab_modular_test,
+        "ORJSON STREAMING",
+        read_streaming_orjson,
+        process_q3_functional,
+        file_path,
     )
-    lab_parallel_test(
+    run_lab_test(
+        "Q3 ORJSON + MULTITHREADING",
+        lab_parallel_test,
         "ORJSON + MULTITHREADING",
         file_path,
-        mode="thread",
-        worker=process_q3_parallel_worker,
+        "thread",
+        process_q3_parallel_worker,
     )
-    lab_parallel_test(
+    run_lab_test(
+        "Q3 ORJSON + MULTIPROCESSING",
+        lab_parallel_test,
         "ORJSON + MULTIPROCESSING",
         file_path,
-        mode="process",
-        worker=process_q3_parallel_worker,
+        "process",
+        process_q3_parallel_worker,
     )
-
-    lab_modular_test(
+    run_lab_test(
+        "Q3 POLARS LAZY",
+        lab_modular_test,
         "POLARS LAZY",
-        lambda f: pl.scan_ndjson(
-            pl.read_ndjson(f, schema=twitter_schema, ignore_errors=True)
-            .to_pandas()
-            .to_json(orient="records", lines=True)
-        ).scan_ndjson(f, schema=twitter_schema, ignore_errors=True)
-        if False
-        else pl.scan_ndjson(f, schema=twitter_schema, ignore_errors=True),
+        lambda f: pl.scan_ndjson(f, schema=twitter_schema, ignore_errors=True),
         lambda lf: lf.explode("mentionedUsers")
         .filter(pl.col("mentionedUsers").is_not_null())
         .select(
@@ -554,8 +685,9 @@ def run_lab():
         .collect(),
         file_path,
     )
-
-    lab_modular_test(
+    run_lab_test(
+        "Q3 POLARS STREAMING",
+        lab_modular_test,
         "POLARS STREAMING",
         lambda f: pl.scan_ndjson(f, schema=twitter_schema, ignore_errors=True),
         lambda lf: lf.explode("mentionedUsers")
@@ -572,8 +704,9 @@ def run_lab():
         .collect(engine="streaming"),
         file_path,
     )
-
-    lab_modular_test(
+    run_lab_test(
+        "Q3 POLARS EAGER",
+        lab_modular_test,
         "POLARS EAGER",
         lambda f: pl.read_ndjson(f, schema=twitter_schema, ignore_errors=True),
         lambda df: df.explode("mentionedUsers")
@@ -591,10 +724,61 @@ def run_lab():
     )
 
 
-if __name__ == "__main__":
-    import os
+# --- NUEVA SECCIÓN DE BENCHMARK FINAL ---
 
+
+def run_final_benchmark():
+    print("\n[FINAL BENCHMARK] Executing all q* functions with real data")
+
+    with open(output_file, "w", encoding="utf-8") as f:
+        f.write("=" * 80 + "\n")
+        f.write("=== FINAL BENCHMARK RESULTS (CANONICAL LOGS) ===\n")
+        f.write("=" * 80 + "\n\n")
+
+        funcs = [
+            ("Q1 Time", q1_time),
+            ("Q1 Memory", q1_memory),
+            ("Q2 Time", q2_time),
+            ("Q2 Memory", q2_memory),
+            ("Q3 Time", q3_time),
+            ("Q3 Memory", q3_memory),
+        ]
+
+        for name, func in funcs:
+            f.write(f"--- Running {name} ---\n")
+            print(f"Benchmarking {name}...")
+
+            perf_func = profile_performance(func)
+            detailed_func = profile_detailed(perf_func)
+
+            log_buffer = io.StringIO()
+            original_stdout = sys.stdout
+            sys.stdout = log_buffer
+
+            try:
+                (peak_mem, duration, result), detailed_stats = detailed_func(file_path)
+                sys.stdout = original_stdout
+                f.write("Performance Metrics:\n")
+                f.write(f"  > Execution Time: {duration:.4f} s\n")
+                f.write(f"  > Peak Memory: {peak_mem:.2f} MB\n")
+                f.write("Detailed Profile (cProfile):\n")
+                f.write(detailed_stats + "\n")
+                f.write("Canonical Log (Wide Event):\n")
+                f.write(log_buffer.getvalue())
+                f.write("Result (First 5 items):\n")
+                f.write(str(result[:5]) + "\n\n")
+            except Exception as e:
+                sys.stdout = original_stdout
+                f.write(f"Error executing {name}: {str(e)}\n\n")
+
+        # Now run the lab comparison and save to the same file
+        run_lab(f)
+
+    print(f"\nBenchmark completed. Results saved to {output_file}")
+
+
+if __name__ == "__main__":
     if os.path.exists(file_path):
-        run_lab()
+        run_final_benchmark()
     else:
         print(f"Error: No se encuentra {file_path}")
